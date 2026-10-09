@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "dgSpecHash": "e6JrYBNdCHM=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Diego\\Desktop\\2ºDAW\\Entorno Servidor\\FunkoApi\\FunkoApiV.2\\FunkoApiV.2\\FunkoApiV.2.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Diego\\.nuget\\packages\\csharpfunctionalextensions\\3.7.0\\csharpfunctionalextensions.3.7.0.nupkg.sha512",
+    "C:\\Users\\Diego\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.0\\microsoft.aspnetcore.openapi.10.0.0.nupkg.sha512",
+    "C:\\Users\\Diego\\.nuget\\packages\\microsoft.openapi\\2.0.0\\microsoft.openapi.2.0.0.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1903",
+      "level": "Warning",
+      "message": "Package 'Microsoft.OpenApi' 2.0.0 has a known high severity vulnerability, https://github.com/advisories/GHSA-v5pm-xwqc-g5wc",
+      "projectPath": "C:\\Users\\Diego\\Desktop\\2ºDAW\\Entorno Servidor\\FunkoApi\\FunkoApiV.2\\FunkoApiV.2\\FunkoApiV.2.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\Users\\Diego\\Desktop\\2ºDAW\\Entorno Servidor\\FunkoApi\\FunkoApiV.2\\FunkoApiV.2\\FunkoApiV.2.csproj",
+      "libraryId": "Microsoft.OpenApi",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}
