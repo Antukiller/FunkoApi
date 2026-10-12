@@ -1,53 +1,59 @@
-﻿using FunkoApiV._2.Error;
+﻿using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Mapper;
 using FunkoApiV._2.Models;
 using FunkoApiV._2.Repository;
+using FunkoApiV._2.Service;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FunkoApiV._2.Controller;
 
 [ApiController]
 [Route("api/[controller]")]
-public class FunkoController(IFunkoRepository repo) : ControllerBase {
+public class FunkoController(IFunkoService ser) : ControllerBase {
     
-    private static List<Funko> _funkos= new();
-
     [HttpGet]
-    public ActionResult<List<Funko>> GetAll() {
-        return Ok(repo.GetAll());
+    public ActionResult<IReadOnlyList<FunkoResponseDto>> GetAll() {
+        return Ok(ser.GetAll().Select(f => f.ToDto()).ToList());
     }
     [HttpGet("{id:int}")]
-    public ActionResult<Funko> GetById(int id) {
-        var resultado = repo.GetById(id);
+    public ActionResult<FunkoResponseDto> GetById(int id) {
+        var resultado = ser.GetById(id);
         return resultado.IsSuccess
-            ? Ok(resultado)
-            : resultado.Error.TopHttpResult<Funko>();
+            ? Ok(resultado.Value.ToDto())
+            : resultado.Error.TopHttpResult<FunkoResponseDto>();
     }
     [HttpPost]
-    public ActionResult<Funko> Create([FromBody] Funko funko) {
-        try {
-            var nuevo =  repo.Add(funko);
-            return CreatedAtAction(nameof(GetById), new { id = nuevo.Id }, funko);
-        } catch (ArgumentException e) {
-            return BadRequest(new { error = e.Message });
+    public ActionResult<FunkoResponseDto> Create([FromBody] FunkoCreateRequest funko) {
+        if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
+            var error = ValidationError.Create("Categoría no válida");
+            return error.TopHttpResult<FunkoResponseDto>();
         }
+        var result = ser.Add(funko.ToModel(categoria));
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value.ToDto())
+            : result.Error.TopHttpResult<FunkoResponseDto>();
     }
 
-    [HttpPut("{id:int}")]
-    public ActionResult<Funko> Update([FromBody] Funko funko, int id) {
-        try {
-            var act = repo.Update(id, funko);
-            if (act is null) return NotFound();
-            return Ok(act);
+        [HttpPut("{id:int}")]
+        public ActionResult<FunkoResponseDto> Update([FromBody] FunkoUpdateRequest funko, int id) {
+            if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
+                var error = ValidationError.Create("Categoría no válida");
+                return error.TopHttpResult<FunkoResponseDto>();
+            }
+            var act = ser.Update(id, funko.ToModel(categoria));
+            return act.IsSuccess
+                ? Ok(act.Value.ToDto())
+                : act.Error.TopHttpResult<FunkoResponseDto>();
         }
-        catch (ArgumentException e) {
-            return BadRequest(new { error = e.Message });
-        }
-    }
 
-    [HttpDelete("{id:int}")]
-    public IActionResult Delete(int id) {
-        var del = repo.SoftDelete(id);
-        if (!del) return NotFound();
-        return NoContent();
-    }
+        [HttpDelete("{id:int}")]
+        public ActionResult<bool> Delete(int id) {
+            var result = ser.SoftDelete(id);
+            return result.IsSuccess
+                ? NoContent()
+                : result.Error.TopHttpResult<bool>();
+        }
+    
 }

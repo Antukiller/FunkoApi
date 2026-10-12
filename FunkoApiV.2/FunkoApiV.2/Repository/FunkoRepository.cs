@@ -1,10 +1,11 @@
 ﻿using CSharpFunctionalExtensions;
 using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Models;
 
 namespace FunkoApiV._2.Repository;
 
-public class FunkoRepository : IFunkoRepository{
+public class FunkoRepository : IFunkoRepository, ISingletonService {
     public FunkoRepository() {
         Add(new Funko {
             Name = "Goku Super Saiyan",
@@ -57,7 +58,7 @@ public class FunkoRepository : IFunkoRepository{
 
     public Result<Funko, DomainError> Update(int id, Funko funko) {
         if (!_funkos.TryGetValue(id, out var f) || f.IsDeleted)
-            Result.Failure<Funko, DomainError>(NotFound.FromId(id, "Funko"));
+            return Result.Failure<Funko, DomainError>(NotFound.FromId(id, "Funko"));
         var actualizado = f with {
             Name = funko.Name,
             Categoria = funko.Categoria,
@@ -69,9 +70,8 @@ public class FunkoRepository : IFunkoRepository{
         return Result.Success<Funko, DomainError>(actualizado);
     }
     public Result<bool, DomainError> SoftDelete(int id) {
-        if (!_funkos.TryGetValue(id, out var f))
-            return Result.Failure<bool, DomainError>(
-                NotFound.FromId(id, "Funko"));
+        if (!_funkos.TryGetValue(id, out var f) || f.IsDeleted)
+            return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Funko"));
         if (f.IsDeleted)
             return false;
         _funkos[id] = f with { IsDeleted = true };

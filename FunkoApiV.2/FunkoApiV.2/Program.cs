@@ -1,15 +1,21 @@
+using FunkoApiV._2.Infrastructure;
 using FunkoApiV._2.Repository;
+using FunkoApiV._2.Service;
 
-var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
 
-builder.Services.AddSingleton<IFunkoRepository, FunkoRepository>();
+var builder = WebApplication.CreateBuilder(args); 
 
-var app = builder.Build();
+builder.Services.AddControllers(); 
 
-app.UseHttpsRedirection();
 
-app.MapControllers();
+builder.Services.AddDependencies();
+
+
+var app = builder.Build(); 
+
+app.UseHttpsRedirection(); 
+
+app.MapControllers(); 
 
 app.Run();

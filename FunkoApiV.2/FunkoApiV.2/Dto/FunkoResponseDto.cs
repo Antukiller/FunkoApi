@@ -1,12 +1,13 @@
-﻿namespace FunkoApiV._2.Dto;
+﻿using FunkoApiV._2.Models;
+
+namespace FunkoApiV._2.Dto;
 
 public record FunkoResponseDto {
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public double Precio { get; set; }
-    public bool Stock { get; set; }
-    public Categoria Categoria { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
-    public bool IsDeleted { get; set; }
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public double Precio { get; init; }
+    public bool Stock { get; init; }
+    public string Categoria { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
 }   
