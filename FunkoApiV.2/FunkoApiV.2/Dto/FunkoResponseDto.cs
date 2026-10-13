@@ -1,4 +1,5 @@
-﻿using FunkoApiV._2.Models;
+﻿using System;
+using FunkoApiV._2.Models;
 
 namespace FunkoApiV._2.Dto;
 

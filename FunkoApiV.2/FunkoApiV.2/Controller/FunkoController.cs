@@ -1,4 +1,6 @@
-﻿using CSharpFunctionalExtensions;
+﻿using System.Collections.Generic;
+using System.Linq;
+using CSharpFunctionalExtensions;
 using FunkoApiV._2.Dto;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Mapper;
