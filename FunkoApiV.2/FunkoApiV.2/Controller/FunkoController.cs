@@ -37,25 +37,26 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value.ToDto())
             : result.Error.TopHttpResult<FunkoResponseDto>();
     }
-
-        [HttpPut("{id:int}")]
-        public ActionResult<FunkoResponseDto> Update([FromBody] FunkoUpdateRequest funko, int id) {
-            if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
-                var error = ValidationError.Create("Categoría no válida");
-                return error.TopHttpResult<FunkoResponseDto>();
-            }
-            var act = ser.Update(id, funko.ToModel(categoria));
-            return act.IsSuccess
-                ? Ok(act.Value.ToDto())
-                : act.Error.TopHttpResult<FunkoResponseDto>();
+    [HttpPut("{id:int}")]
+    public ActionResult<FunkoResponseDto> Update([FromBody] FunkoUpdateRequest funko, int id) {
+        if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
+            var error = ValidationError.Create("Categoría no válida");
+            return error.TopHttpResult<FunkoResponseDto>();
         }
+        var act = ser.Update(id, funko.ToModel(categoria));
+        return act.IsSuccess
+            ? Ok(act.Value.ToDto())
+            : act.Error.TopHttpResult<FunkoResponseDto>();
+    }
 
-        [HttpDelete("{id:int}")]
-        public ActionResult<bool> Delete(int id) {
-            var result = ser.SoftDelete(id);
-            return result.IsSuccess
-                ? NoContent()
-                : result.Error.TopHttpResult<bool>();
-        }
+    [HttpDelete("{id:int}")]
+    public ActionResult<bool> Delete(int id) {
+        var result = ser.SoftDelete(id);
+        return result.IsSuccess
+            ? NoContent()
+            : result.Error.TopHttpResult<bool>();
+    }
+
+        
     
 }
