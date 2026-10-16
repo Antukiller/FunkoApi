@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FunkoApiV._2.Repository;
 
-public class FunkoRepository(AppDbContext context) : IFunkoRepository, ISingletonService {
+public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedService {
     public async Task<IReadOnlyList<Funko>> GetAll() => 
         await context.Funkos
             .AsNoTracking()

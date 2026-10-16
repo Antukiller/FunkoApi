@@ -1,0 +1,42 @@
+﻿services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: funkoapi_backend
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ConnectionStrings__Sqlite=Data Source=/app/data/funkos.db
+      - ConnectionStrings__Postgres=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
+    command: ["Development"]
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    volumes:
+      - sqlite_data:/app/data
+
+  db:
+    image: postgres:16-alpine
+    container_name: funkoapi_postgres
+    profiles: ["prod"]
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: funkos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d funkos"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  sqlite_data:
+  postgres_data:

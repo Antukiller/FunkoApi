@@ -29,23 +29,23 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             : resultado.Error.TopHttpResult<FunkoResponseDto>();
     }
     [HttpPost]
-    public ActionResult<FunkoResponseDto> Create([FromBody] FunkoCreateRequest funko) {
-        var result = ser.Add(funko.ToModel());
+    public async Task<ActionResult<FunkoResponseDto>> Create([FromBody] FunkoCreateRequest funko) {
+        var result = await ser.Add(funko.ToModel());
         return result.IsSuccess
             ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value.ToDto())
             : result.Error.TopHttpResult<FunkoResponseDto>();
     }
     [HttpPut("{id:int}")]
-    public ActionResult<FunkoResponseDto> Update([FromBody] FunkoUpdateRequest funko, int id) {
-        var act = ser.Update(id, funko.ToModel());
+    public async Task<ActionResult<FunkoResponseDto>> Update([FromBody] FunkoUpdateRequest funko, int id) {
+        var act = await ser.Update(id, funko.ToModel());
         return act.IsSuccess
             ? Ok(act.Value.ToDto())
             : act.Error.TopHttpResult<FunkoResponseDto>();
     }
 
     [HttpDelete("{id:int}")]
-    public ActionResult<bool> Delete(int id) {
-        var result = ser.SoftDelete(id);
+    public async Task<ActionResult<bool>> Delete(int id) {
+        var result = await ser.SoftDelete(id);
         return result.IsSuccess
             ? NoContent()
             : result.Error.TopHttpResult<bool>();

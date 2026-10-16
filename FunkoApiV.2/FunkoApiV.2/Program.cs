@@ -1,17 +1,76 @@
+using System.Text;
+using FunkoApiV._2.Config;
+using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args); 
+namespace FunkoApiV._2;
 
-builder.Services.AddControllers(); 
+public class Program {
+    
+    private const string Titulo = "FunkoApi V.2 - Backend Server";
 
+    public static async Task Main(string[] args) {
+        Console.OutputEncoding = Encoding.UTF8;
+        Console.Title = Titulo;
+        
+        try {
 
-builder.Services.AddDependencies();
+            var builder = WebApplication.CreateBuilder(args);
 
+            // 1. Inicializar configuración personalizada (lee argumentos y appsettings correspondientes)
+            FunkoConfig.Init(args);
 
-var app = builder.Build(); 
+            builder.Services.AddControllers();
 
-app.UseHttpsRedirection(); 
+            // 2. Configurar el DbContext según el repositorio indicado en FunkoConfig
+            if (FunkoConfig.RepositoryName.Equals("SQLite", StringComparison.OrdinalIgnoreCase)) {
+                Directory.CreateDirectory(FunkoConfig.DataFolder);
+                builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(FunkoConfig.DbConnection));
+            } else {
+                builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(FunkoConfig.DbConnection));
+            }
 
-app.MapControllers(); 
+            // 3. Registrar dependencias con Scrutor
+            builder.Services.AddDependencies();
 
-app.Run();
+            var app = builder.Build();
+
+            // 4. Inicializar / Crear la base de datos y Seed Data al arrancar
+            await InitializeDatabaseAsync(app.Services);
+
+            MostrarCabecera();
+
+            app.UseHttpsRedirection();
+            app.MapControllers();
+
+            await app.RunAsync();
+        }
+        catch (Exception ex) { }
+
+    }
+
+    /// <summary>
+    /// Crea la base de datos y aplica el Seed Data automáticamente si no existe.
+    /// </summary>
+    private static async Task InitializeDatabaseAsync(IServiceProvider provider) {
+        using var scope = provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.EnsureCreatedAsync();
+    }
+
+    /// <summary>
+    /// Muestra la cabecera informativa por consola al arrancar la API.
+    /// </summary>
+    private static void MostrarCabecera() {
+        Console.WriteLine();
+        Console.WriteLine("┌────────────────────────────────────────────────┐");
+        Console.WriteLine("│       FunkoApi V.2 - Servidor Web Activo       │");
+        Console.WriteLine("└────────────────────────────────────────────────┘");
+        Console.WriteLine();
+        Console.WriteLine($" Entorno / API:  {FunkoConfig.ApiName}");
+        Console.WriteLine($" Repositorio:    {FunkoConfig.RepositoryName}");
+        Console.WriteLine($" Ruta Datos:     {FunkoConfig.DataFolder}");
+        Console.WriteLine();
+    }
+}
