@@ -8,9 +8,9 @@ using FunkoApiV._2.Repository;
 namespace FunkoApiV._2.Service;
 
 public class FunkoService(IFunkoRepository repo) : IFunkoService, IScopedService {
-    public IReadOnlyList<Funko> GetAll() => repo.GetAll();
-    public Result<Funko, DomainError> GetById(int id) => repo.GetById(id);
-    public Result<Funko, DomainError> Add(Funko funko) => repo.Add(funko);
-    public Result<Funko, DomainError> Update(int id, Funko funko) => repo.Update(id, funko);
-    public Result<bool, DomainError> SoftDelete(int id) => repo.SoftDelete(id);
+    public Task<IReadOnlyList<Funko>> GetAll() => repo.GetAll();
+    public Task<Result<Funko, DomainError>> GetById(int id) => repo.GetById(id);
+    public Task<Result<Funko, DomainError>> Add(Funko funko) => repo.Add(funko);
+    public Task<Result<Funko, DomainError>> Update(int id, Funko funko) => repo.Update(id, funko);
+    public Task<Result<bool, DomainError>> SoftDelete(int id) => repo.SoftDelete(id);
 }

@@ -16,34 +16,28 @@ namespace FunkoApiV._2.Controller;
 public class FunkoController(IFunkoService ser) : ControllerBase {
     
     [HttpGet]
-    public ActionResult<IReadOnlyList<FunkoResponseDto>> GetAll() {
-        return Ok(ser.GetAll().Select(f => f.ToDto()).ToList());
+    public async Task<ActionResult<IReadOnlyList<FunkoResponseDto>>> GetAll() {
+        var funkos = await ser.GetAll();
+        return Ok(funkos.Select(f => f.ToDto()).ToList());
+        
     }
     [HttpGet("{id:int}")]
-    public ActionResult<FunkoResponseDto> GetById(int id) {
-        var resultado = ser.GetById(id);
+    public async Task<ActionResult<FunkoResponseDto>> GetById(int id) {
+        var resultado = await ser.GetById(id);
         return resultado.IsSuccess
             ? Ok(resultado.Value.ToDto())
             : resultado.Error.TopHttpResult<FunkoResponseDto>();
     }
     [HttpPost]
     public ActionResult<FunkoResponseDto> Create([FromBody] FunkoCreateRequest funko) {
-        if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
-            var error = ValidationError.Create("Categoría no válida");
-            return error.TopHttpResult<FunkoResponseDto>();
-        }
-        var result = ser.Add(funko.ToModel(categoria));
+        var result = ser.Add(funko.ToModel());
         return result.IsSuccess
             ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value.ToDto())
             : result.Error.TopHttpResult<FunkoResponseDto>();
     }
     [HttpPut("{id:int}")]
     public ActionResult<FunkoResponseDto> Update([FromBody] FunkoUpdateRequest funko, int id) {
-        if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
-            var error = ValidationError.Create("Categoría no válida");
-            return error.TopHttpResult<FunkoResponseDto>();
-        }
-        var act = ser.Update(id, funko.ToModel(categoria));
+        var act = ser.Update(id, funko.ToModel());
         return act.IsSuccess
             ? Ok(act.Value.ToDto())
             : act.Error.TopHttpResult<FunkoResponseDto>();

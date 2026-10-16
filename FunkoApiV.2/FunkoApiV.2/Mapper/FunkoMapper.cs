@@ -10,29 +10,33 @@ public static class FunkoMapper {
         Name = f.Name,
         Precio = f.Precio,
         Stock = f.Stock,
-        Categoria = f.Categoria.ToString(),
+        CategoriaId = f.CategoriaId,
+        Categoria = f.Categoria?.Nombre ?? string.Empty,
         CreatedAt = f.CreatedAt,
         UpdatedAt = f.UpdatedAt
     };
 
-    public static Funko ToModel(this FunkoCreateRequest dto, Categoria categoria) => new() {
+    public static Funko ToModel(this FunkoCreateRequest dto) => new() {
         Name = dto.Name,
         Precio = dto.Precio,
         Stock = dto.Stock,
-        Categoria = categoria,
+        CategoriaId = dto.CategoriaId,
         CreatedAt = DateTime.UtcNow,
-        UpdatedAt = DateTime.UtcNow,
+        UpdatedAt = null,
         IsDeleted = false
     };
-    
-    public static Funko ToModel(this FunkoUpdateRequest dto, Categoria categoria) => new() {
+
+    public static Funko ToModel(this FunkoUpdateRequest dto) => new() {
         Name = dto.Name,
         Precio = dto.Precio,
         Stock = dto.Stock,
-        Categoria = categoria
+        CategoriaId = dto.CategoriaId,
+        UpdatedAt = DateTime.UtcNow
     };
-    public static bool TryParseCategoria(string valor, out Categoria categoria) {
-        return Enum.TryParse(valor, true, out categoria)
-               && Enum.IsDefined(typeof(Categoria), categoria);
-    }
+
+    public static CategoriaDto ToDto(this Categoria c) => new(
+        c.Id,
+        c.Nombre,
+        c.Descripcion ?? string.Empty
+    );
 }
