@@ -13,8 +13,8 @@ public class FunkoService(IFunkoRepository repo, ICategoriaRepository cateRepo) 
     public async Task<IReadOnlyList<FunkoResponseDto>> GetAll() => (await repo.GetAll()).Select(p => p.ToDto()).ToList();
     public async Task<IReadOnlyCollection<FunkoResponseDto>> GetDeleted() => (await repo.GetAllDeleted()).Select(p => p.ToDto()).ToList();
     public async Task<Result<FunkoResponseDto, DomainError>> GetById(int id) => (await repo.GetById(id)).Map(p => p.ToDto());
-    public async Task<Result<FunkoResponseDto, DomainError>> Add(Funko funko) => (await repo.Add(funko)).Map(p => p.ToDto());
-    public async Task<Result<FunkoResponseDto, DomainError>> Update(int id, Funko funko) => (await repo.Update(id, funko)).Map(p => p.ToDto());
+    public async Task<Result<FunkoResponseDto, DomainError>> Add(FunkoCreateRequest funko) => (await repo.Add(funko.ToModel())).Map(p => p.ToDto());
+    public async Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest funko) => (await repo.Update(id, funko.ToModel())).Map(p => p.ToDto());
     public async Task<Result<bool, DomainError>> SoftDelete(int id) => await repo.SoftDelete(id);
     public async Task<Result<bool, DomainError>> Restore(int id) => await repo.Restore(id);
     public async Task<IReadOnlyList<CategoriaDto>> GetAllCategories() => (await cateRepo.GetAll()).Select(p => p.ToDto()).ToList();

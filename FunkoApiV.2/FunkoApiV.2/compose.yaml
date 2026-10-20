@@ -10,7 +10,7 @@
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__Sqlite=Data Source=/app/data/funkos.db
       - ConnectionStrings__Postgres=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
-    command: ["Development"]
+    command: ["Production"]
     depends_on:
       db:
         condition: service_healthy

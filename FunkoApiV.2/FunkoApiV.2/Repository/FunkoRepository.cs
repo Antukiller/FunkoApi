@@ -43,29 +43,25 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
     }
 
     public async Task<Result<Funko, DomainError>> Update(int id, Funko funko) {
-        if (await context.Funkos.FindAsync(funko.Id) is null || funko.IsDeleted)
+        var existente = await context.Funkos
+            .Include(f => f.Categoria)
+            .FirstOrDefaultAsync(f => f.Id == id);
+        if (existente is null || existente.IsDeleted)
             return Result.Failure<Funko, DomainError>(NotFound.FromId(id, "Funko"));
-        var actualizado = funko with {
-            Name = funko.Name,
-            CategoriaId = funko.CategoriaId,
-            Categoria = funko.Categoria,
-            Precio = funko.Precio,
-            Stock = funko.Stock,
-            UpdatedAt = DateTime.UtcNow
-        };
-        context.Entry(actualizado).State = EntityState.Modified;
-        context.Funkos.Update(actualizado);
+        existente.Name = funko.Name;
+        existente.CategoriaId = funko.CategoriaId;
+        existente.Precio = funko.Precio;
+        existente.Stock = funko.Stock;
+        existente.UpdatedAt = DateTime.UtcNow;
         await context.SaveChangesAsync();
-        return Result.Success<Funko, DomainError>(actualizado);
+        return Result.Success<Funko, DomainError>(existente);
     }
     public async Task<Result<bool, DomainError>> SoftDelete(int id) {
         var funko = await context.Funkos.FindAsync(id);
         if (funko is null) 
             return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Funko"));
-        var del = funko with {
-            IsDeleted = true
-        };
-        context.Entry(del).State = EntityState.Deleted;
+        funko.IsDeleted = true;
+        funko.UpdatedAt = DateTime.UtcNow;
         await context.SaveChangesAsync();
         return Result.Success<bool, DomainError>(true);
     }

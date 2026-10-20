@@ -10,8 +10,8 @@ public interface IFunkoService {
     Task<IReadOnlyList<FunkoResponseDto>> GetAll();
     Task<IReadOnlyCollection<FunkoResponseDto>> GetDeleted();
     Task<Result<FunkoResponseDto, DomainError>> GetById(int id);
-    Task<Result<FunkoResponseDto, DomainError>> Add(Funko funko);
-    Task<Result<FunkoResponseDto, DomainError>> Update(int id, Funko funko);
+    Task<Result<FunkoResponseDto, DomainError>> Add(FunkoCreateRequest funko);
+    Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest funko);
     Task<Result<bool, DomainError>> SoftDelete(int id);
     Task<Result<bool, DomainError>> Restore(int id);
     Task<IReadOnlyList<CategoriaDto>> GetAllCategories();

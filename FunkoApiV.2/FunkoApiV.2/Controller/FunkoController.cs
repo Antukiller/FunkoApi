@@ -35,14 +35,14 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
     }
     [HttpPost]
     public async Task<ActionResult<FunkoResponseDto>> Create([FromBody] FunkoCreateRequest funko) {
-        var result = await ser.Add(funko.ToModel());
+        var result = await ser.Add(funko);
         return result.IsSuccess
             ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
             : result.Error.TopHttpResult<FunkoResponseDto>();
     }
     [HttpPut("{id:int}")]
     public async Task<ActionResult<FunkoResponseDto>> Update([FromBody] FunkoUpdateRequest funko, int id) {
-        var act = await ser.Update(id, funko.ToModel());
+        var act = await ser.Update(id, funko);
         return act.IsSuccess
             ? Ok(act.Value)
             : act.Error.TopHttpResult<FunkoResponseDto>();
@@ -65,7 +65,15 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = err.Message })
         };
     }
+    [HttpGet("categorias")]
+    public ActionResult<List<CategoriaDto>> GetCategorias() {
+        var categorias = ser.GetAllCategories();
+        return Ok(categorias);
+    }
 
-        
-    
+    [HttpGet("categorias/{id:long}")]
+    public ActionResult<CategoriaDto> GetCategoriaById(int id) {
+        var categoria = ser.GetByIdCategories(id);
+        return Ok(categoria);
+    }
 }
