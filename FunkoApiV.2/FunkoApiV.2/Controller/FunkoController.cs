@@ -1,11 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using CSharpFunctionalExtensions;
-using FunkoApiV._2.Dto;
+﻿using FunkoApiV._2.Dto;
 using FunkoApiV._2.Error;
-using FunkoApiV._2.Mapper;
-using FunkoApiV._2.Models;
-using FunkoApiV._2.Repository;
 using FunkoApiV._2.Service;
 using Microsoft.AspNetCore.Mvc;
 
