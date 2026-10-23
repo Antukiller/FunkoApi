@@ -3,6 +3,7 @@ using FunkoApiV._2.Config;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 
 namespace FunkoApiV._2;
 
@@ -21,6 +22,8 @@ public class Program {
             // 1. Inicializar configuración personalizada (lee argumentos y appsettings correspondientes)
             FunkoConfig.Init(args);
 
+            builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
+            
             builder.Services.AddControllers();
 
             // 2. Configurar el DbContext según el repositorio indicado en FunkoConfig

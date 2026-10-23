@@ -16,7 +16,6 @@ public static class FunkoConfig {
             .Build();
     }
 
-    // Obligamos a que se lea estrictamente del JSON
     public static string ApiName => 
         Config.GetValue<string>("ApiSettings:Name") 
         ?? throw new InvalidOperationException("Falta ApiSettings:Name en el archivo JSON.");
