@@ -19,6 +19,11 @@ public static class FunkoConfig {
     public static string ApiName => 
         Config.GetValue<string>("ApiSettings:Name") 
         ?? throw new InvalidOperationException("Falta ApiSettings:Name en el archivo JSON.");
+    
+    public static string CacheName => 
+        Config.GetValue<string>("Cache:Name") 
+        ?? throw new InvalidOperationException("Falta ApiSettings:Name en el archivo JSON.");
+
 
     public static string RepositoryName => 
         Config.GetValue<string>("Repository:Name") 

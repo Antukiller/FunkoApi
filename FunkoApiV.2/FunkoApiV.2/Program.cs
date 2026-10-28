@@ -1,4 +1,5 @@
 using System.Text;
+using FunkoApiMongo.Cache;
 using FunkoApiV._2.Config;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
@@ -18,15 +19,21 @@ public class Program {
         try {
 
             var builder = WebApplication.CreateBuilder(args);
-
-            // 1. Inicializar configuración personalizada (lee argumentos y appsettings correspondientes)
+            if (builder.Environment.IsDevelopment()) {
+                builder.Services.AddMemoryCache();
+                builder.Services.AddSingleton<ICacheService, MemCacheService>();
+            } else {
+                builder.Services.AddStackExchangeRedisCache(op => {
+                    op.Configuration = builder.Configuration.GetConnectionString("Redis");
+                });
+                builder.Services.AddSingleton<ICacheService, RedisService>();
+            }
             FunkoConfig.Init(args);
 
             builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
             
             builder.Services.AddControllers();
 
-            // 2. Configurar el DbContext según el repositorio indicado en FunkoConfig
             if (FunkoConfig.RepositoryName.Equals("SQLite", StringComparison.OrdinalIgnoreCase)) {
                 Directory.CreateDirectory(FunkoConfig.DataFolder);
                 builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(FunkoConfig.DbConnection));
@@ -48,8 +55,10 @@ public class Program {
             app.MapControllers();
 
             await app.RunAsync();
+        } catch (Exception ex) {
+            Console.WriteLine($"ERROR AL INICIAR LA API: {ex}");
+            throw;
         }
-        catch (Exception ex) { }
 
     }
 
@@ -74,6 +83,8 @@ public class Program {
         Console.WriteLine($" Entorno / API:  {FunkoConfig.ApiName}");
         Console.WriteLine($" Repositorio:    {FunkoConfig.RepositoryName}");
         Console.WriteLine($" Ruta Datos:     {FunkoConfig.DataFolder}");
+        Console.WriteLine($" Cache Name:     {FunkoConfig.CacheName}");
+
         Console.WriteLine();
     }
 }

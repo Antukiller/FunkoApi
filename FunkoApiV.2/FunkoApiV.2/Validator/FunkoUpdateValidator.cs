@@ -4,7 +4,7 @@ using FunkoApiV._2.Infrastructure.Interfaces;
 
 namespace FunkoApiV._2.Validator;
 
-public class FunkoUpdateValidator :  AbstractValidator<FunkoCreateRequest>, ITransientService{
+public class FunkoUpdateValidator :  AbstractValidator<FunkoUpdateRequest>, ITransientService{
     public FunkoUpdateValidator() {
         RuleFor(x => x.Name)
             .NotEmpty().WithMessage("El nombre es obligatorio")
