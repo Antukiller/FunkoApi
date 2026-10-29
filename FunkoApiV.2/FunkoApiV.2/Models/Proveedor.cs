@@ -6,4 +6,7 @@ public record Proveedor {
     public string Nombre { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
     public ICollection<Funko> Funkos { get; set; } = []; 
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; }
 }
