@@ -4,8 +4,8 @@ namespace FunkoApiV._2.Error;
 
 public static class DomainErrorExtensions {
     public static ActionResult<T> TopHttpResult<T>(this DomainError error) => error switch {
-        NotFound => new NotFoundObjectResult(new { message = error }),
-        ValidationError ve => new BadRequestObjectResult(new { message = ve.Message, errors = ve.Errors }),
+        NotFound => new NotFoundObjectResult(new { message = error.Message }),
+        ValidationError => new BadRequestObjectResult(new { message = error.Message }),
         _ => new ObjectResult(new { message = "Error interno del servidor" }) { StatusCode = 500 }
     };
 }

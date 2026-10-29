@@ -1,11 +1,5 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using CSharpFunctionalExtensions;
-using FunkoApiV._2.Dto;
+﻿using FunkoApiV._2.Dto;
 using FunkoApiV._2.Error;
-using FunkoApiV._2.Mapper;
-using FunkoApiV._2.Models;
-using FunkoApiV._2.Repository;
 using FunkoApiV._2.Service;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,46 +10,64 @@ namespace FunkoApiV._2.Controller;
 public class FunkoController(IFunkoService ser) : ControllerBase {
     
     [HttpGet]
-    public ActionResult<IReadOnlyList<FunkoResponseDto>> GetAll() {
-        return Ok(ser.GetAll().Select(f => f.ToDto()).ToList());
+    public async Task<ActionResult<IReadOnlyList<FunkoResponseDto>>> GetAll() {
+        var funkos = await ser.GetAll();
+        return Ok(funkos.ToList());
     }
     [HttpGet("{id:int}")]
-    public ActionResult<FunkoResponseDto> GetById(int id) {
-        var resultado = ser.GetById(id);
+    public async Task<ActionResult<FunkoResponseDto>> GetById(int id) {
+        var resultado = await ser.GetById(id);
         return resultado.IsSuccess
-            ? Ok(resultado.Value.ToDto())
+            ? Ok(resultado.Value)
             : resultado.Error.TopHttpResult<FunkoResponseDto>();
     }
+
+    [HttpGet("deleted")]
+    public async Task<ActionResult<FunkoResponseDto>> GetDeleted() {
+        var get = await ser.GetDeleted();
+        return Ok(get.ToList());
+    }
     [HttpPost]
-    public ActionResult<FunkoResponseDto> Create([FromBody] FunkoCreateRequest funko) {
-        if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
-            var error = ValidationError.Create("Categoría no válida");
-            return error.TopHttpResult<FunkoResponseDto>();
-        }
-        var result = ser.Add(funko.ToModel(categoria));
+    public async Task<ActionResult<FunkoResponseDto>> Create([FromBody] FunkoCreateRequest funko) {
+        var result = await ser.Add(funko);
         return result.IsSuccess
-            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value.ToDto())
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
             : result.Error.TopHttpResult<FunkoResponseDto>();
     }
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<FunkoResponseDto>> Update([FromBody] FunkoUpdateRequest funko, int id) {
+        var act = await ser.Update(id, funko);
+        return act.IsSuccess
+            ? Ok(act.Value)
+            : act.Error.TopHttpResult<FunkoResponseDto>();
+    }
 
-        [HttpPut("{id:int}")]
-        public ActionResult<FunkoResponseDto> Update([FromBody] FunkoUpdateRequest funko, int id) {
-            if (!FunkoMapper.TryParseCategoria(funko.Categoria, out var categoria)) {
-                var error = ValidationError.Create("Categoría no válida");
-                return error.TopHttpResult<FunkoResponseDto>();
-            }
-            var act = ser.Update(id, funko.ToModel(categoria));
-            return act.IsSuccess
-                ? Ok(act.Value.ToDto())
-                : act.Error.TopHttpResult<FunkoResponseDto>();
-        }
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<bool>> Delete(int id) {
+        var result = await ser.SoftDelete(id);
+        return result.IsSuccess
+            ? NoContent()
+            : result.Error.TopHttpResult<bool>();
+    }
+    [HttpPost("{id:int}/restore")]
+    public async Task<ActionResult<bool>>  Restore(int id) {
+        var result = await ser.Restore(id);
+        if (result.IsSuccess) return Ok(result.Value);
+        var err = result.Error;
+        return result.Error switch {
+            NotFound notFound => NotFound(new { message = notFound.Message }),
+            _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = err.Message })
+        };
+    }
+    [HttpGet("categorias")]
+    public ActionResult<List<CategoriaDto>> GetCategorias() {
+        var categorias = ser.GetAllCategories();
+        return Ok(categorias);
+    }
 
-        [HttpDelete("{id:int}")]
-        public ActionResult<bool> Delete(int id) {
-            var result = ser.SoftDelete(id);
-            return result.IsSuccess
-                ? NoContent()
-                : result.Error.TopHttpResult<bool>();
-        }
-    
+    [HttpGet("categorias/{id:long}")]
+    public ActionResult<CategoriaDto> GetCategoriaById(int id) {
+        var categoria = ser.GetByIdCategories(id);
+        return Ok(categoria);
+    }
 }
