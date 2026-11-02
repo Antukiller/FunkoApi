@@ -24,8 +24,5 @@
     <ItemGroup>
         <ProjectReference Include="..\FunkoApiV.2\FunkoApiV.2.csproj" />
     </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Proveedor\" />
-    </ItemGroup>
 
 </Project>

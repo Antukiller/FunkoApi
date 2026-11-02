@@ -1,9 +1,10 @@
 ﻿using FunkoApiV._2.Entity;
+using FunkoApiV._2.Models;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Bson;
 using Testcontainers.MongoDb;
 
-namespace FunkoApiV2Test.Proveedor.Repository;
+namespace FunkoApiV2Test.Repository;
 
 public abstract class ProveedorRepositoryBaseTest {
     protected static readonly ObjectId ProveedorId = ObjectId.Parse("672f1a8b3c9d4e5f6a7b8c9d");

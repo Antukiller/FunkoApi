@@ -4,7 +4,7 @@ using FunkoApiV._2.Repository;
 using Microsoft.Extensions.Logging.Abstractions;
 using MongoDB.Bson;
 
-namespace FunkoApiV2Test.Proveedor.Repository;
+namespace FunkoApiV2Test.Repository;
 
 [TestFixture]
 public class ProveedorRepositoryTests : ProveedorRepositoryBaseTest {
