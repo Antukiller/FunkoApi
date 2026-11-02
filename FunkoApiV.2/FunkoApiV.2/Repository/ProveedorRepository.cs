@@ -4,8 +4,6 @@ using FunkoApiV._2.Error;
 using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Models;
 using Microsoft.EntityFrameworkCore;
-using MongoDB.Bson;
-
 namespace FunkoApiV._2.Repository;
 
 public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorRepository> log) : IProveedorRepository, IScopedService {
@@ -16,7 +14,7 @@ public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorR
 
     public async Task<Result<Proveedor, DomainError>> GetById(string id) {
         log.LogDebug("Obteniendo proveedor con id: {Id} ", id);
-        var funko = await context.Proveedor.FirstOrDefaultAsync(p => p.Id == ObjectId.Parse(id) && !p.IsDeleted);
+        var funko = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && !p.IsDeleted);
         return funko is not null 
             ? Result.Success<Proveedor, DomainError>(funko)
             : Result.Failure<Proveedor, DomainError>(NotFound.FromId(id, "Proveedor"));
@@ -55,7 +53,7 @@ public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorR
 
     public async Task<Result<bool, DomainError>> SoftDelete(string id) {
         log.LogDebug("Eliminando proveedor con id: {id} ", id);
-        var proveedor = await context.Proveedor.FindAsync(ObjectId.Parse(id));
+        var proveedor = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && !p.IsDeleted);
         if (proveedor is null)
             return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Proveedor"));
         proveedor.IsDeleted = true;
@@ -67,7 +65,7 @@ public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorR
 
     public async Task<Result<bool, DomainError>> Restore(string id) {
         log.LogDebug("Restaurando proveedor con id: {id} ", id);
-        var proveedor = await context.Proveedor.FirstOrDefaultAsync(p => p.Id == ObjectId.Parse(id) && p.IsDeleted);
+        var proveedor = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && p.IsDeleted);
         if (proveedor is null) 
             return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Proveedor"));
         proveedor.IsDeleted = false;

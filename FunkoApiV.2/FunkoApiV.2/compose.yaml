@@ -19,7 +19,16 @@
       - postgres_data:/var/lib/postgresql/data
     networks:
       - funko_net
-
+  mongo_db:
+    image: mongo:7
+    container_name: funkoapi_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - funko_net
   # Cache Redis
   redis:
     image: redis:latest
@@ -40,14 +49,15 @@
     ports:
       - "8080:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__Postgres=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
+      - ConnectionStrings__Postgre=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=redis:6379
-    command: ["Development"]
+      - ConnectionStrings__Mongo=mongodb://mongo_db:27017
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_started
+      mongo_db:
         condition: service_started
     networks:
       - funko_net
@@ -59,3 +69,4 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  mongo_data:

@@ -1,8 +1,6 @@
-﻿using FunkoApiMongo.Cache;
-using FunkoApiMongo.Service;
-using FunkoApiV._2.Infrastructure.Interfaces;
+﻿using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Service;
-using Microsoft.Extensions.DependencyInjection;
+using FunkoApiV._2.Service.Proveedor;
 
 namespace FunkoApiV._2.Infrastructure;
 
@@ -16,12 +14,10 @@ public static class DependencerProvider {
             .AddClasses(c => c.AssignableTo<IScopedService>())
             .AsImplementedInterfaces()
             .WithScopedLifetime()
-            .AddClasses(c => c.AssignableTo<ISingletonService>()
-                .Where(type => type != typeof(MemCacheService) && type != typeof(RedisService)))
-            .AsImplementedInterfaces()
-            .WithSingletonLifetime()
         );
         services.Decorate<IFunkoService, CachedFunkoService>();
+        services.Decorate<IProveedorService, CachedProveedorService>();
+
         return services;
     }
 }

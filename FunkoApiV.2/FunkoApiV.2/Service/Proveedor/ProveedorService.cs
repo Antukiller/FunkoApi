@@ -1,0 +1,67 @@
+﻿using CSharpFunctionalExtensions;
+using FluentValidation;
+using FunkoApiV._2.Dto.Proveedor;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Mapper.Provedor;
+using FunkoApiV._2.Repository;
+
+namespace FunkoApiV._2.Service;
+
+public class ProveedorService(
+    IProveedorRepository repo,
+    ILogger<ProveedorService> log,
+    IValidator<ProveedorRequestDto> validator) : IProveedorService, IScopedService {
+    public async Task<IReadOnlyList<ProveedorResponseDto>> GetAll() {
+        log.LogDebug("Obteniendo todos los proveedores");
+        var prov = await repo.GetAll();
+        return prov.Select(p => p.ToDto()).ToList();
+    }
+
+    public async Task<IReadOnlyCollection<ProveedorResponseDto>> GetDeleted() {
+        log.LogDebug("Obteniendo todos los proveedores eliminados");
+        var deleted = await repo.GetAllDeleted();
+        return deleted.Select(t => t.ToDto()).ToList();
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> GetById(string id) {
+        log.LogDebug("Obteniendo proveedor con id: {@Id}", id);
+        var prov = await repo.GetById(id);
+        return prov.Map(p => p.ToDto());
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> Add(ProveedorRequestDto proveedor) {
+        log.LogDebug("Añadiendo proveedor: {@Prov}", proveedor);
+        var validation = await validator.ValidateAsync(proveedor);
+        if (!validation.IsValid) {
+            log.LogWarning("Validación fallida al crear funko: {@Errors}", validation.Errors);
+            return Result.Failure<ProveedorResponseDto, DomainError>(
+                new ValidationError(validation.Errors[0].ErrorMessage));
+        }
+        var creado = await repo.Add(proveedor.ToModel());
+        return creado.Map(p => p.ToDto());
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> Update(string id, ProveedorRequestDto proveedor) {
+        log.LogDebug("Actualizando proveedor con id: {Id} with: {@Prov}", id, proveedor);
+
+        var validation = await validator.ValidateAsync(proveedor);
+        if (!validation.IsValid) {
+            log.LogWarning("Validación fallida al actualizar funko {Id}: {@Errors}", id, validation.Errors);
+            return Result.Failure<ProveedorResponseDto, DomainError>(
+                new ValidationError(validation.Errors[0].ErrorMessage));
+        }
+        log.LogDebug("Realizando actualizacion del funko con id: {@Id}", id);
+        return (await repo.Update(id, proveedor.ToModel())).Map(p => p.ToDto());
+    }
+
+    public async Task<Result<bool, DomainError>> SoftDelete(string id) {
+        log.LogDebug("Eliminando proeedor con id: {@Id}", id);
+        return await repo.SoftDelete(id);
+    }
+
+    public async Task<Result<bool, DomainError>> Restore(string id) {
+        log.LogDebug("Restaurando proveedor con id: {@Id}", id);
+        return await repo.Restore(id);
+    }
+}
