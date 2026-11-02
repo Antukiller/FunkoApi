@@ -1,90 +1,76 @@
-using System.Text;
+using FluentValidation;
 using FunkoApiMongo.Cache;
+using FunkoApiMongo.Config;
 using FunkoApiV._2.Config;
+using FunkoApiV._2.Converters;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.EntityFrameworkCore.Extensions;
 using Serilog;
 
 namespace FunkoApiV._2;
 
 public class Program {
-    
-    private const string Titulo = "FunkoApi V.2 - Backend Server";
 
     public static async Task Main(string[] args) {
-        Console.OutputEncoding = Encoding.UTF8;
-        Console.Title = Titulo;
+
+        var builder = WebApplication.CreateBuilder(args);
+
+        // 0. Inicializar la configuración (¡antes de usarla!)
+        FunkoConfig.Init(builder.Configuration);
+
+        // 1. Serilog
+        builder.Host.UseSerilog((context, services, configuration) => configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext());
+
+        // 3. Controladores + OpenAPI
+        builder.Services.AddControllers()
+            .AddJsonOptions(options => {
+                options.JsonSerializerOptions.Converters.Add(new ObjectIdJsonConverter());
+            });
         
-        try {
+        builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-            var builder = WebApplication.CreateBuilder(args);
-            if (builder.Environment.IsDevelopment()) {
-                builder.Services.AddMemoryCache();
-                builder.Services.AddSingleton<ICacheService, MemCacheService>();
-            } else {
-                builder.Services.AddStackExchangeRedisCache(op => {
-                    op.Configuration = builder.Configuration.GetConnectionString("Redis");
-                });
-                builder.Services.AddSingleton<ICacheService, RedisService>();
-            }
-            FunkoConfig.Init(args);
 
-            builder.Host.UseSerilog((context, config) => config.ReadFrom.Configuration(context.Configuration));
-            
-            builder.Services.AddControllers();
+        builder.Services.AddControllers();
+        builder.Services.AddOpenApi();
 
-            if (FunkoConfig.RepositoryName.Equals("SQLite", StringComparison.OrdinalIgnoreCase)) {
-                Directory.CreateDirectory(FunkoConfig.DataFolder);
-                builder.Services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(FunkoConfig.DbConnection));
-            } else {
-                builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(FunkoConfig.DbConnection));
-            }
+        // 4. EF Core: Postgres (Funko/Categoria) + Mongo (Proveedor)
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(FunkoConfig.PostgresConnection));
 
-            // 3. Registrar dependencias con Scrutor
-            builder.Services.AddDependencies();
+        builder.Services.AddDbContext<AppDbContextMongoDb>(options =>
+            options.UseMongoDB(FunkoConfig.MongoConnection, FunkoConfig.MongoDatabase));
 
-            var app = builder.Build();
+        // 5. Caché (Redis, sin bifurcar por entorno)
+        builder.Services.Configure<CacheConfig>(
+            builder.Configuration.GetSection(CacheConfig.CacheName));
 
-            // 4. Inicializar / Crear la base de datos y Seed Data al arrancar
-            await InitializeDatabaseAsync(app.Services);
+        builder.Services.AddStackExchangeRedisCache(options =>
+            options.Configuration = FunkoConfig.RedisConnection);
 
-            MostrarCabecera();
+        builder.Services.AddSingleton<ICacheService, RedisService>();
 
-            app.UseHttpsRedirection();
-            app.MapControllers();
+        // 6. Scrutor (repositorios, servicios y decoradores)
+        builder.Services.AddDependencies();
 
-            await app.RunAsync();
-        } catch (Exception ex) {
-            Console.WriteLine($"ERROR AL INICIAR LA API: {ex}");
-            throw;
+        var app = builder.Build();
+
+        // 8. OpenAPI siempre (ya no hay dos entornos)
+        app.MapOpenApi();
+
+        // 9. Esquema + seed de Postgres
+        using (var scope = app.Services.CreateScope()) {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.EnsureCreatedAsync();
         }
 
-    }
+        app.UseHttpsRedirection();
+        app.MapControllers();
 
-    /// <summary>
-    /// Crea la base de datos y aplica el Seed Data automáticamente si no existe.
-    /// </summary>
-    private static async Task InitializeDatabaseAsync(IServiceProvider provider) {
-        using var scope = provider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.EnsureCreatedAsync();
-    }
-
-    /// <summary>
-    /// Muestra la cabecera informativa por consola al arrancar la API.
-    /// </summary>
-    private static void MostrarCabecera() {
-        Console.WriteLine();
-        Console.WriteLine("┌────────────────────────────────────────────────┐");
-        Console.WriteLine("│       FunkoApi V.2 - Servidor Web Activo       │");
-        Console.WriteLine("└────────────────────────────────────────────────┘");
-        Console.WriteLine();
-        Console.WriteLine($" Entorno / API:  {FunkoConfig.ApiName}");
-        Console.WriteLine($" Repositorio:    {FunkoConfig.RepositoryName}");
-        Console.WriteLine($" Ruta Datos:     {FunkoConfig.DataFolder}");
-        Console.WriteLine($" Cache Name:     {FunkoConfig.CacheName}");
-
-        Console.WriteLine();
+        await app.RunAsync();
     }
 }

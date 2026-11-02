@@ -2,10 +2,8 @@
 using FunkoApiMongo.Cache;
 using FunkoApiV._2.Dto;
 using FunkoApiV._2.Error;
-using FunkoApiV._2.Infrastructure.Interfaces;
-using FunkoApiV._2.Service;
 
-namespace FunkoApiMongo.Service;
+namespace FunkoApiV._2.Service;
 
 public class CachedFunkoService(IFunkoService inner, ICacheService cache) : IFunkoService {
     private const string AllKey = "funkos:all";
