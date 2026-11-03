@@ -59,15 +59,4 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = err.Message })
         };
     }
-    [HttpGet("categorias")]
-    public ActionResult<List<CategoriaDto>> GetCategorias() {
-        var categorias = ser.GetAllCategories();
-        return Ok(categorias);
-    }
-
-    [HttpGet("categorias/{id:long}")]
-    public ActionResult<CategoriaDto> GetCategoriaById(int id) {
-        var categoria = ser.GetByIdCategories(id);
-        return Ok(categoria);
-    }
 }

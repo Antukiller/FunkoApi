@@ -22,7 +22,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         var funko = await context.Funkos.AsNoTracking().Include(c => c.Categoria).FirstOrDefaultAsync(f => f.Id == id);
         return funko is not null
             ? Result.Success<Funko, DomainError>(funko)
-            : Result.Failure<Funko, DomainError>(NotFound.FromId(id, "Funko"));
+            : Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
     }
     public async Task<IReadOnlyList<Funko>> GetAllDeleted() {
         return await context.Funkos.IgnoreQueryFilters()
@@ -34,7 +34,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
 
     public async Task<Result<Funko, DomainError>> Add(Funko funko) {
         var nuevo = funko with {
-            CreatedAt = DateTime.Now,
+            CreatedAt = DateTime.UtcNow,
             IsDeleted = false
         };
         await context.Funkos.AddAsync(nuevo);
@@ -47,11 +47,13 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
             .Include(f => f.Categoria)
             .FirstOrDefaultAsync(f => f.Id == id);
         if (existente is null || existente.IsDeleted)
-            return Result.Failure<Funko, DomainError>(NotFound.FromId(id, "Funko"));
+            return Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
         existente.Name = funko.Name;
         existente.CategoriaId = funko.CategoriaId;
         existente.Precio = funko.Precio;
         existente.Stock = funko.Stock;
+        existente.Imagen = funko.Imagen;
+        existente.ProveedorId = funko.ProveedorId;
         existente.UpdatedAt = DateTime.UtcNow;
         await context.SaveChangesAsync();
         return Result.Success<Funko, DomainError>(existente);
@@ -59,7 +61,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
     public async Task<Result<bool, DomainError>> SoftDelete(int id) {
         var funko = await context.Funkos.FindAsync(id);
         if (funko is null) 
-            return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Funko"));
+            return Result.Failure<bool, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
         funko.IsDeleted = true;
         funko.UpdatedAt = DateTime.UtcNow;
         await context.SaveChangesAsync();
@@ -70,7 +72,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         var funko = await context.Funkos.IgnoreQueryFilters()
             .FirstOrDefaultAsync(f => f.Id  == id && f.IsDeleted);
         if (funko is null) 
-            return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Funko"));
+            return Result.Failure<bool, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
         funko.IsDeleted = false;
         await context.SaveChangesAsync();
         return Result.Success<bool, DomainError>(true);
