@@ -13,23 +13,21 @@ public class FunkoCreateValidator : AbstractValidator<FunkoCreateRequest>, ITran
 
         RuleFor(x => x.Precio)
             .InclusiveBetween(0.01m, 50.0m).WithMessage("El precio debe estar entre 0.01 y 50.0");
-
+        
+        RuleFor(x => x.Stock)
+            .GreaterThanOrEqualTo(0).WithMessage("El stock no puede ser negativo");
         RuleFor(x => x.CategoriaId)
             .NotEmpty().WithMessage("El ID de la categoría es obligatorio")
             .Length(11).WithMessage("El ID de la categoría debe tener 11 caracteres");
 
         RuleFor(x => x.ProveedorId)
             .NotEmpty().WithMessage("El ID del proveedor es obligatorio")
-            .Matches("^[a-fA-F0-9]{24}$")
-            .WithMessage("El ID del proveedor debe ser un ObjectId de 24 caracteres hexadecimales");
-
-        RuleFor(x => x.Stock)
-            .GreaterThanOrEqualTo(0).WithMessage("El stock no puede ser negativo");
+            .Matches("^[0-9a-fA-F]{24}$")
+            .WithMessage("El ID del proveedor debe ser un ObjectId de 24 caracteres hex");
 
         RuleFor(x => x.Imagen)
-            .NotEmpty().WithMessage("La imagen es obligatoria")
-            .MaximumLength(255).WithMessage("La ruta de la imagen no puede superar los 255 caracteres")
-            .Must(p => p.StartsWith("/uploads/funkos/", StringComparison.OrdinalIgnoreCase))
-            .WithMessage("La imagen debe ser una ruta relativa que empiece por /uploads/funkos/");
+            .MaximumLength(500)
+            .Must(uri => string.IsNullOrWhiteSpace(uri) || Uri.TryCreate(uri, UriKind.Absolute, out _))
+            .WithMessage("La imagen debe ser una URL válida");
     }
 }
