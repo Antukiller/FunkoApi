@@ -80,6 +80,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         existente.Name = funko.Name;
         existente.Precio = funko.Precio;
         existente.Stock = funko.Stock;
+        existente.Imagen = funko.Imagen;
         existente.CategoriaId = funko.CategoriaId;
         existente.ProveedorId = funko.ProveedorId;
         existente.UpdatedAt = DateTime.UtcNow;
