@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "FunkoApi - Funkos y Categorias",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

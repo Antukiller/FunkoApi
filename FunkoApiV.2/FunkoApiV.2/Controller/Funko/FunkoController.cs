@@ -1,0 +1,71 @@
+﻿using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Service;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FunkoApiV._2.Controller;
+
+[ApiController]
+[Route("api/funkos")]
+public class FunkoController(IFunkoService ser) : ControllerBase {
+
+    /// <summary>Listado paginado con filtros por nombre, categoría, proveedor, precio y stock.</summary>
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<FunkoResponseDto>>> GetAll([FromQuery] FunkoFilterRequest filter) =>
+        Ok(await ser.GetAll(filter));
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<FunkoResponseDto>> GetById(int id) {
+        var resultado = await ser.GetById(id);
+        return resultado.IsSuccess
+            ? Ok(resultado.Value)
+            : resultado.Error.TopHttpResult<FunkoResponseDto>();
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<FunkoResponseDto>> Create([FromBody] FunkoCreateRequest funko) {
+        var result = await ser.Add(funko);
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
+            : result.Error.TopHttpResult<FunkoResponseDto>();
+    }
+
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<FunkoResponseDto>> Update(int id, [FromBody] FunkoUpdateRequest funko) {
+        var result = await ser.Update(id, funko);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<FunkoResponseDto>();
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<bool>> Delete(int id) {
+        var result = await ser.Delete(id);
+        return result.IsSuccess
+            ? NoContent()
+            : result.Error.TopHttpResult<bool>();
+    }
+
+    /// <summary>
+    /// Sube una imagen y devuelve la ruta relativa que hay que enviar al crear el funko.
+    /// </summary>
+    [HttpPost("imagen")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ImagenResponseDto>> UploadImagen([FromForm] IFormFile file) {
+        var result = await ser.UploadImagen(file);
+        return result.IsSuccess
+            ? Ok(new ImagenResponseDto(result.Value))
+            : result.Error.TopHttpResult<ImagenResponseDto>();
+    }
+
+    /// <summary>Cambia la imagen de un funko existente.</summary>
+    [HttpPatch("{id:int}/imagen")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<FunkoResponseDto>> UpdateImagen(int id, [FromForm] IFormFile file) {
+        var result = await ser.UpdateImagen(id, file);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<FunkoResponseDto>();
+    }
+}

@@ -1,0 +1,22 @@
+meta {
+  name: Crear funko
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/funkos
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Funko de prueba",
+    "precio": 15.99,
+    "categoriaId": "{{categoriaId}}",
+    "proveedorId": "{{proveedorId}}",
+    "stock": 5,
+    "imagen": "/uploads/funkos/placeholder.png"
+  }
+}

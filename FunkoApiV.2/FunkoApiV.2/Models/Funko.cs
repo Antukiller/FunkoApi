@@ -1,7 +1,5 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using MongoDB.Bson;
 
 namespace FunkoApiV._2.Models;
 
@@ -14,12 +12,11 @@ public record Funko {
     public int Stock { get; set; }
     public string? Imagen { get; set; }
 
-    public string CategoriaId { get; set; } = null!;
+    public string CategoriaId { get; set; } = string.Empty;
     public Categoria Categoria { get; set; } = null!;
-    
-    public string ProveedorId { get; set; } 
-    public Proveedor Proveedor { get; set; }
-    
+
+    public string ProveedorId { get; set; } = string.Empty;
+
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public bool IsDeleted { get; set; }
