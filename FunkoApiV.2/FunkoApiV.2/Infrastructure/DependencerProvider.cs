@@ -15,7 +15,9 @@ public static class DependencerProvider {
             .AsImplementedInterfaces()
             .WithScopedLifetime()
         );
+
         services.Decorate<IFunkoService, CachedFunkoService>();
+        services.Decorate<ICategoriaService, CachedCategoriaService>();
         services.Decorate<IProveedorService, CachedProveedorService>();
 
         return services;

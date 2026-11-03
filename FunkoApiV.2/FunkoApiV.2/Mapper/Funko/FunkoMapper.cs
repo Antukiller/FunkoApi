@@ -1,5 +1,4 @@
-﻿using System;
-using FunkoApiV._2.Dto;
+﻿using FunkoApiV._2.Dto;
 using FunkoApiV._2.Models;
 
 namespace FunkoApiV._2.Mapper;
@@ -10,8 +9,10 @@ public static class FunkoMapper {
         Name = f.Name,
         Precio = f.Precio,
         Stock = f.Stock,
-        CategoriaId = f.CategoriaId,
+        Imagen = f.Imagen,
         Categoria = f.Categoria?.Nombre ?? string.Empty,
+        CategoriaId = f.CategoriaId,
+        ProveedorId = f.ProveedorId,
         CreatedAt = f.CreatedAt,
         UpdatedAt = f.UpdatedAt
     };
@@ -20,7 +21,9 @@ public static class FunkoMapper {
         Name = dto.Name,
         Precio = dto.Precio,
         Stock = dto.Stock,
+        Imagen = dto.Imagen,
         CategoriaId = dto.CategoriaId,
+        ProveedorId = dto.ProveedorId,
         CreatedAt = DateTime.UtcNow,
         UpdatedAt = null,
         IsDeleted = false
@@ -31,12 +34,7 @@ public static class FunkoMapper {
         Precio = dto.Precio,
         Stock = dto.Stock,
         CategoriaId = dto.CategoriaId,
+        ProveedorId = dto.ProveedorId,
         UpdatedAt = DateTime.UtcNow
     };
-
-    public static CategoriaDto ToDto(this Categoria c) => new(
-        c.Id,
-        c.Nombre,
-        c.Descripcion ?? string.Empty
-    );
 }

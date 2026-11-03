@@ -34,8 +34,6 @@ public class Program {
         
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-
-        builder.Services.AddControllers();
         builder.Services.AddOpenApi();
 
         // 4. EF Core: Postgres (Funko/Categoria) + Mongo (Proveedor)
@@ -69,6 +67,7 @@ public class Program {
         }
 
         app.UseHttpsRedirection();
+        app.UseStaticFiles();
         app.MapControllers();
 
         await app.RunAsync();

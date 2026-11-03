@@ -1,0 +1,18 @@
+meta {
+  name: Listar categorias
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/categorias
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 0
+  size: 10
+  sortBy: nombre
+  direction: asc
+}

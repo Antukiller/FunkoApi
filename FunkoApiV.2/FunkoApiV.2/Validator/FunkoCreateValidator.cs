@@ -15,9 +15,21 @@ public class FunkoCreateValidator : AbstractValidator<FunkoCreateRequest>, ITran
             .InclusiveBetween(0.01m, 50.0m).WithMessage("El precio debe estar entre 0.01 y 50.0");
 
         RuleFor(x => x.CategoriaId)
-            .GreaterThan(0).WithMessage("El ID de la categoría debe ser mayor que 0");
+            .NotEmpty().WithMessage("El ID de la categoría es obligatorio")
+            .Length(11).WithMessage("El ID de la categoría debe tener 11 caracteres");
+
+        RuleFor(x => x.ProveedorId)
+            .NotEmpty().WithMessage("El ID del proveedor es obligatorio")
+            .Matches("^[a-fA-F0-9]{24}$")
+            .WithMessage("El ID del proveedor debe ser un ObjectId de 24 caracteres hexadecimales");
 
         RuleFor(x => x.Stock)
             .GreaterThanOrEqualTo(0).WithMessage("El stock no puede ser negativo");
+
+        RuleFor(x => x.Imagen)
+            .NotEmpty().WithMessage("La imagen es obligatoria")
+            .MaximumLength(255).WithMessage("La ruta de la imagen no puede superar los 255 caracteres")
+            .Must(p => p.StartsWith("/uploads/funkos/", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("La imagen debe ser una ruta relativa que empiece por /uploads/funkos/");
     }
 }
