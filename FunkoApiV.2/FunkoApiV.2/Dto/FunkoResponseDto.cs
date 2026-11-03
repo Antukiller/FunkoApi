@@ -8,8 +8,12 @@ public record FunkoResponseDto {
     public string Name { get; init; } = string.Empty;
     public decimal Precio { get; init; }
     public int Stock { get; init; }
+    public string? Imagen { get; set; }
     public string Categoria { get; init; } = string.Empty;
-    public int CategoriaId { get; init; }
+    public string CategoriaId { get; init; }
+    
+    public string ProveedorId { get; set; } 
+    public Models.Proveedor Proveedor { get; set; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 }

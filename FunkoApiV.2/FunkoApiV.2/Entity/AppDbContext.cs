@@ -21,12 +21,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasPrecision(20, 2);
             e.Property(x => x.Stock)
                 .IsRequired();
+            e.Property(x => x.Imagen);
+            
             e.Property(x => x.CategoriaId)
-                .IsRequired();
+                .IsRequired()
+                .HasMaxLength(11)
+                .IsFixedLength();
             e.HasOne(f => f.Categoria)
-                .WithMany(c => c.Funkos)
+                .WithMany()
                 .HasForeignKey(f => f.CategoriaId)
                 .OnDelete(DeleteBehavior.Restrict);
+            
+            e.Property(x => x.ProveedorId)
+                .IsRequired()
+                .HasMaxLength(24);
+
             e.Property(x => x.CreatedAt)
                 .IsRequired();
             e.Property(x => x.UpdatedAt)
@@ -35,14 +44,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .IsRequired()
                 .HasDefaultValue(false);
             e.HasQueryFilter(f => !f.IsDeleted);
-            var seedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            e.HasData(
-                new Funko { Id = 1, Name = "Kirito", Precio = 15.99m, Stock = 10, CategoriaId = 1, CreatedAt = seedDate, IsDeleted = false },
-                new Funko { Id = 2, Name = "Hinata Shoyo", Precio = 14.50m, Stock = 8, CategoriaId = 1, CreatedAt = seedDate, IsDeleted = false },
-                new Funko { Id = 3, Name = "Master Chief", Precio = 19.99m, Stock = 5, CategoriaId = 2, CreatedAt = seedDate, IsDeleted = false },
-                new Funko { Id = 4, Name = "Geralt de Rivia", Precio = 17.50m, Stock = 12, CategoriaId = 2, CreatedAt = seedDate, IsDeleted = false },
-                new Funko { Id = 5, Name = "Darth Vader", Precio = 21.00m, Stock = 3, CategoriaId = 3, CreatedAt = seedDate, IsDeleted = false }
-            );
         });
         modelBuilder.Entity<Categoria>(e => {
             e.ToTable("categoria");
@@ -54,11 +55,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.Property(x => x.Descripcion)
                 .HasMaxLength(500);
-            e.HasData(
-                new Categoria { Id = 1, Nombre = "Anime", Descripcion = "Personajes de series de anime y manga" },
-                new Categoria { Id = 2, Nombre = "Videojuegos", Descripcion = "Personajes de consolas y PC" },
-                new Categoria { Id = 3, Nombre = "Películas", Descripcion = "Cine y series de televisión" }
-            );
+
         });
     }
 }

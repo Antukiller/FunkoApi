@@ -10,7 +10,8 @@ using FunkoApiV._2.Repository;
 namespace FunkoApiV._2.Service;
 
 public class FunkoService(
-    IFunkoRepository repo, 
+    IFunkoRepository repoFunko, 
+    IProveedorRepository repoProveedor,
     ICategoriaRepository cateRepo, 
     ILogger<FunkoService> log,
     IValidator<FunkoCreateRequest> createValidation,
@@ -18,19 +19,19 @@ public class FunkoService(
     ) : IFunkoService, IScopedService {
     public async Task<IReadOnlyList<FunkoResponseDto>> GetAll() {
         log.LogInformation("Getting all funkos");
-        var funkos = await repo.GetAll();
+        var funkos = await repoFunko.GetAll();
         return funkos.Select(t => t.ToDto()).ToList();
     }
 
     public async Task<IReadOnlyCollection<FunkoResponseDto>> GetDeleted() {
         log.LogInformation("Getting deleted funkos");
-        var deleted = await repo.GetAllDeleted();
+        var deleted = await repoFunko.GetAllDeleted();
         return deleted.Select(t => t.ToDto()).ToList();
     }
 
     public async Task<Result<FunkoResponseDto, DomainError>> GetById(int id) {
         log.LogInformation("Getting funko by id: {@Id}", id);
-        var funko = await repo.GetById(id);
+        var funko = await repoFunko.GetById(id);
         return funko.Map(p => p.ToDto());
     }
 
@@ -42,7 +43,7 @@ public class FunkoService(
             return Result.Failure<FunkoResponseDto, DomainError>(
                 new ValidationError(validation.Errors[0].ErrorMessage));
         }
-        var creado = await repo.Add(funko.ToModel());
+        var creado = await repoFunko.Add(funko.ToModel());
         return creado.Map(p => p.ToDto());
     }
     public async Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest funko) {
@@ -55,26 +56,18 @@ public class FunkoService(
                 new ValidationError(validation.Errors[0].ErrorMessage));
         }
         log.LogInformation("Realizando actualizacion del funko con id: {@Id}", id);
-        return (await repo.Update(id, funko.ToModel())).Map(p => p.ToDto());
+        return (await repoFunko.Update(id, funko.ToModel())).Map(p => p.ToDto());
     }
 
     public async Task<Result<bool, DomainError>> SoftDelete(int id) {
         log.LogInformation("Soft deleting funko: {@Id}", id);
-        return await repo.SoftDelete(id);
+        
+        return await repoFunko.SoftDelete(id);
     }
 
     public async Task<Result<bool, DomainError>> Restore(int id) {
         log.LogInformation("Restoring funko: {@Id}", id);
-        return await repo.Restore(id);
+        return await repoFunko.Restore(id);
     }
-
-    public async Task<IReadOnlyList<CategoriaDto>> GetAllCategories() {
-        log.LogInformation("Getting all categories");
-        return (await cateRepo.GetAll()).Select(p => p.ToDto()).ToList();
-    }
-
-    public async Task<Result<CategoriaDto, DomainError>> GetByIdCategories(int id) {
-        log.LogInformation("Getting category by id: {@Id}", id);
-        return (await cateRepo.GetById(id)).Map(p => p.ToDto());
-    }
+    
 }

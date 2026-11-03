@@ -10,8 +10,9 @@ public static class FunkoMapper {
         Name = f.Name,
         Precio = f.Precio,
         Stock = f.Stock,
+        Imagen = f.Imagen,
         CategoriaId = f.CategoriaId,
-        Categoria = f.Categoria?.Nombre ?? string.Empty,
+        ProveedorId = f.ProveedorId,
         CreatedAt = f.CreatedAt,
         UpdatedAt = f.UpdatedAt
     };
@@ -20,23 +21,20 @@ public static class FunkoMapper {
         Name = dto.Name,
         Precio = dto.Precio,
         Stock = dto.Stock,
+        Imagen =  dto.Imagen,
         CategoriaId = dto.CategoriaId,
+        ProveedorId =  dto.ProveedorId,
         CreatedAt = DateTime.UtcNow,
-        UpdatedAt = null,
-        IsDeleted = false
     };
 
     public static Funko ToModel(this FunkoUpdateRequest dto) => new() {
         Name = dto.Name,
         Precio = dto.Precio,
         Stock = dto.Stock,
+        Imagen = dto.Imagen,
         CategoriaId = dto.CategoriaId,
+        ProveedorId = dto.ProveedorId,
         UpdatedAt = DateTime.UtcNow
     };
-
-    public static CategoriaDto ToDto(this Categoria c) => new(
-        c.Id,
-        c.Nombre,
-        c.Descripcion ?? string.Empty
-    );
+    
 }

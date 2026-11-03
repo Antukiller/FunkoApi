@@ -72,26 +72,4 @@ public class CachedFunkoService(IFunkoService inner, ICacheService cache) : IFun
         await cache.RemoveAsync(DeletedKey);
         return res;
     }
-
-    public async Task<IReadOnlyList<CategoriaDto>> GetAllCategories() {
-        var result = await cache.GetOrSetAsync(
-            "categorias:all",
-            async () => await inner.GetAllCategories()
-        );
-        return result ?? [];
-    }
-
-    public async Task<Result<CategoriaDto, DomainError>> GetByIdCategories(int id) {
-        var key = $"categoria:{id}";
-        var cached = await cache.GetAsync<CategoriaDto>(key);
-        if (cached != null) 
-            return Result.Success<CategoriaDto, DomainError>(cached);
-            
-        var result = await inner.GetByIdCategories(id);
-        
-        if (result.IsSuccess)
-            await cache.SetAsync(key, result.Value);
-            
-        return result;
-    }
 }

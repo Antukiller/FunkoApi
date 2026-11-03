@@ -14,6 +14,4 @@ public interface IFunkoService {
     Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest funko);
     Task<Result<bool, DomainError>> SoftDelete(int id);
     Task<Result<bool, DomainError>> Restore(int id);
-    Task<IReadOnlyList<CategoriaDto>> GetAllCategories();
-    Task<Result<CategoriaDto, DomainError>> GetByIdCategories(int id);
 }
