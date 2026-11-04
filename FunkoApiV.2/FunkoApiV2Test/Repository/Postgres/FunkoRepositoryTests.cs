@@ -79,15 +79,7 @@ public class FunkoRepositoryTests : PostgresBaseTest {
         resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Imagen.Should().Be("/uploads/funkos/nueva.png");
     }
-
-    [Test]
-    public async Task CountByCategoriaIdAsync_ignora_los_borrados() {
-        await _repository.DeleteAsync(1);
-
-        var total = await _repository.CountByCategoriaIdAsync("Anime000001");
-
-        total.Should().Be(1);
-    }
+    
 
     private static Funko NuevoFunko(string categoriaId) => new() {
         Name = "Nuevo",

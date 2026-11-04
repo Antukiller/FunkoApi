@@ -62,14 +62,4 @@ public class CachedProveedorService(IProveedorService inner, ICacheService cache
         return res;
         
     }
-
-    public async Task<Result<bool, DomainError>> Restore(string id) {
-        var res = await inner.Restore(id);
-        if (!res.IsSuccess) return res;
-
-        await cache.RemoveAsync(ByIdKey(id));
-        await cache.RemoveAsync(AllKey);
-        await cache.RemoveAsync(DeletedKey);
-        return res;
-    }
 }

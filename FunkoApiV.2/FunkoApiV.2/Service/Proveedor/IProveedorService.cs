@@ -12,5 +12,4 @@ public interface IProveedorService {
     Task<Result<ProveedorResponseDto, DomainError>> Add(ProveedorRequestDto proveedor);
     Task<Result<ProveedorResponseDto, DomainError>> Update(string id, ProveedorRequestDto proveedor);
     Task<Result<bool, DomainError>> SoftDelete(string id);
-    Task<Result<bool, DomainError>> Restore(string id);
 }

@@ -84,16 +84,6 @@ public class ProveedorRepositoryTests : ProveedorRepositoryBaseTest {
             resultado.IsSuccess.Should().BeTrue();
             (await _repository.GetAll()).Should().BeEmpty();
         }
-
-        [Test]
-        public async Task Restore_lo_devuelve_al_listado() {
-            await _repository.SoftDelete(ProveedorId.ToString());
-
-            var resultado = await _repository.Restore(ProveedorId.ToString());
-
-            resultado.IsSuccess.Should().BeTrue();
-            (await _repository.GetAll()).Should().ContainSingle(p => p.Id == ProveedorId);
-        }
     }
 
     [TestFixture]
@@ -134,12 +124,5 @@ public class ProveedorRepositoryTests : ProveedorRepositoryBaseTest {
             resultado.Error.Should().BeOfType<NotFound>();
         }
 
-        [Test]
-        public async Task Restore_de_un_proveedor_no_borrado_devuelve_NotFound() {
-            var resultado = await _repository.Restore(ProveedorId.ToString());
-
-            resultado.IsFailure.Should().BeTrue();
-            resultado.Error.Should().BeOfType<NotFound>();
-        }
     }
 }

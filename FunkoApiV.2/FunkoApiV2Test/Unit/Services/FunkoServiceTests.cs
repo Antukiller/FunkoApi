@@ -20,17 +20,24 @@ public class FunkoServiceTests {
     private Mock<IFunkoRepository> _repo = null!;
     private Mock<IFileStorageService> _storage = null!;
     private FunkoService _service = null!;
-
+    private Mock<IProveedorRepository> _repoProveedor;
+    private Mock<ICategoriaRepository> _repoCategoria;
+    
     [SetUp]
     public void SetUp() {
         _repo = new Mock<IFunkoRepository>();
         _storage = new Mock<IFileStorageService>();
+        _repoProveedor = new Mock<IProveedorRepository>();
+        _repoCategoria = new Mock<ICategoriaRepository>();
+    
         _service = new FunkoService(
-            _repo.Object,
-            NullLogger<FunkoService>.Instance,
-            new FunkoCreateValidator(),
-            new FunkoUpdateValidator(),
-            _storage.Object);
+            _repo.Object,                              
+            _repoProveedor.Object,                     
+            _repoCategoria.Object,                  
+            NullLogger<FunkoService>.Instance,      
+            new FunkoCreateValidator(),             
+            new FunkoUpdateValidator(),                
+            _storage.Object);                         
     }
 
     [Test]

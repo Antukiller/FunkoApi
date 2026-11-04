@@ -55,9 +55,6 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
     }
 
     public async Task<Result<Funko, DomainError>> CreateAsync(Funko funko) {
-        if (!await CategoriaActivaAsync(funko.CategoriaId))
-            return Result.Failure<Funko, DomainError>(NotFound.FromId(funko.CategoriaId, "Categoria"));
-
         var nuevo = funko with {
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null,
@@ -73,9 +70,6 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         var existente = await context.Funkos.FirstOrDefaultAsync(f => f.Id == id);
         if (existente is null)
             return Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
-
-        if (!await CategoriaActivaAsync(funko.CategoriaId))
-            return Result.Failure<Funko, DomainError>(NotFound.FromId(funko.CategoriaId, "Categoria"));
 
         existente.Name = funko.Name;
         existente.Precio = funko.Precio;
@@ -111,18 +105,6 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         await context.SaveChangesAsync();
         return Result.Success<bool, DomainError>(true);
     }
-
-    public Task<int> CountByCategoriaIdAsync(string categoriaId) =>
-        context.Funkos.CountAsync(f => f.CategoriaId == categoriaId);
-
-    public async Task<IReadOnlyList<int>> GetIdsByCategoriaIdAsync(string categoriaId) =>
-        await context.Funkos
-            .Where(f => f.CategoriaId == categoriaId)
-            .Select(f => f.Id)
-            .ToListAsync();
-
-    private Task<bool> CategoriaActivaAsync(string categoriaId) =>
-        context.Categorias.AnyAsync(c => c.Id == categoriaId && !c.IsDeleted);
 
     private static IQueryable<Funko> ApplySort(IQueryable<Funko> query, string sortBy, string direction) {
         var desc = direction.Equals("desc", StringComparison.OrdinalIgnoreCase);

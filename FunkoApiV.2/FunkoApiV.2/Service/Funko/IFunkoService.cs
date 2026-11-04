@@ -15,7 +15,7 @@ public interface IFunkoService {
     Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest request);
 
     Task<Result<bool, DomainError>> Delete(int id);
-
+    
     Task<Result<string, DomainError>> UploadImagen(IFormFile file);
 
     Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(int id, IFormFile file);

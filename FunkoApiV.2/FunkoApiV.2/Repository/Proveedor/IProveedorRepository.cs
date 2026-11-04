@@ -17,5 +17,4 @@ public interface IProveedorRepository {
     
     Task<Result<bool, DomainError>> SoftDelete(string id);
     
-    Task<Result<bool, DomainError>> Restore(string id);
 }
