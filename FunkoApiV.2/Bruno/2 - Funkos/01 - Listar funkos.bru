@@ -1,0 +1,35 @@
+meta {
+  name: Listar funkos (paginado y filtros)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/funkos
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 0
+  size: 10
+  sortBy: precio
+  direction: desc
+  categoriaId: Anime000001
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("items es un array", function() {
+    expect(res.body.items).to.be.an("array");
+  });
+  test("totalCount mayor que 0", function() {
+    expect(res.body.totalCount).to.be.greaterThan(0);
+  });
+  test("paginacion coherente", function() {
+    expect(res.body.page).to.equal(0);
+    expect(res.body.pageSize).to.equal(10);
+  });
+}

@@ -1,0 +1,37 @@
+meta {
+  name: Actualizar funko
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/funkos/{{funkoIdCreado}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Funko Bruno Act",
+    "precio": 16.50,
+    "categoriaId": "{{categoriaId}}",
+    "proveedorId": "{{proveedorIdCreado}}",
+    "stock": 7,
+    "imagen": "/uploads/funkos/placeholder.png"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("nombre actualizado", function() {
+    expect(res.body.name).to.equal("Funko Bruno Act");
+  });
+  test("precio actualizado", function() {
+    expect(res.body.precio).to.equal(16.5);
+  });
+  test("stock actualizado", function() {
+    expect(res.body.stock).to.equal(7);
+  });
+}

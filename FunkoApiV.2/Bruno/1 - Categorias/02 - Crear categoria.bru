@@ -1,0 +1,36 @@
+meta {
+  name: Crear categoria
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/categorias
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "nombre": "Categoria Bruno Test",
+    "descripcion": "Creada por Bruno"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("categoriaIdCreada", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("id tiene 11 caracteres", function() {
+    expect(res.body.id).to.have.lengthOf(11);
+  });
+  test("nombre correcto", function() {
+    expect(res.body.nombre).to.equal("Categoria Bruno Test");
+  });
+}

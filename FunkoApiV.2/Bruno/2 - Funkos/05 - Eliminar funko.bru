@@ -1,0 +1,17 @@
+meta {
+  name: Eliminar funko (borrado logico)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/funkos/{{funkoIdCreado}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}
