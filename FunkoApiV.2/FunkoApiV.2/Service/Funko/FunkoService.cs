@@ -15,7 +15,7 @@ public class FunkoService(
     ILogger<FunkoService> log,
     IValidator<FunkoCreateRequest> createValidation,
     IValidator<FunkoUpdateRequest> updateValidation,
-    IFileStorageService storage
+    IStorageService storage
 ) : IFunkoService, IScopedService {
 
     public async Task<PagedResult<FunkoResponseDto>> GetAll(FunkoFilterRequest filter) {
@@ -63,35 +63,34 @@ public class FunkoService(
         return await repo.DeleteAsync(id);
     }
 
-    public async Task<Result<string, DomainError>> UploadImagen(IFormFile file) {
-        try {
-            return Result.Success<string, DomainError>(await storage.SaveAsync(file, "funkos"));
-        } catch (ArgumentException ex) {
-            log.LogWarning(ex, "Fichero de imagen no válido");
-            return Result.Failure<string, DomainError>(new ValidationError(ex.Message));
-        }
-    }
+    public Task<Result<string, DomainError>> UploadImagen(IFormFile file) =>
+        storage.SaveFileAsync(file, "funkos");
 
     public async Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(int id, IFormFile file) {
         var funko = await repo.GetByIdAsync(id);
         if (funko.IsFailure)
             return Result.Failure<FunkoResponseDto, DomainError>(funko.Error);
 
-        Result<string, DomainError> guardada;
-        try {
-            guardada = await storage.SaveAsync(file, "funkos");
-        } catch (ArgumentException ex) {
-            log.LogWarning(ex, "Fichero de imagen no válido para el funko {Id}", id);
-            return Result.Failure<FunkoResponseDto, DomainError>(new ValidationError(ex.Message));
-        }
+        var guardada = await storage.SaveFileAsync(file, "funkos");
+        if (guardada.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(guardada.Error);
 
         var actualizado = await repo.SetImagenAsync(id, guardada.Value);
         if (actualizado.IsFailure) {
-            storage.Delete(guardada.Value);
+            var borrado = await storage.DeleteFileAsync(guardada.Value);
+            if (borrado.IsFailure)
+                log.LogError("No se pudo limpiar la imagen temporal {Imagen}: {Error}",
+                    guardada.Value, borrado.Error.Message);
             return Result.Failure<FunkoResponseDto, DomainError>(actualizado.Error);
         }
 
-        storage.Delete(funko.Value.Imagen);
+        if (!string.IsNullOrWhiteSpace(funko.Value.Imagen)) {
+            var borrado = await storage.DeleteFileAsync(funko.Value.Imagen);
+            if (borrado.IsFailure)
+                log.LogWarning("La imagen anterior del funko {Id} no se pudo eliminar: {Error}",
+                    id, borrado.Error.Message);
+        }
+
         return actualizado.Map(f => f.ToDto());
     }
 }

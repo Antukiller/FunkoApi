@@ -8,3 +8,7 @@ public sealed record NotFound(string Message) : DomainError(Message) {
 public sealed record ValidationError(string Message) : DomainError(Message);
 
 public sealed record Conflict(string Message) : DomainError(Message);
+
+public sealed record BusinessRuleError(string Message) : DomainError(Message);
+
+public sealed record InternalError(string Message) : DomainError(Message);
