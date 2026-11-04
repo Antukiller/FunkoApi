@@ -12,6 +12,8 @@ namespace FunkoApiV._2.Service;
 
 public class FunkoService(
     IFunkoRepository repo,
+    IProveedorRepository repoProveedor,
+    ICategoriaRepository  repoCategoria,
     ILogger<FunkoService> log,
     IValidator<FunkoCreateRequest> createValidation,
     IValidator<FunkoUpdateRequest> updateValidation,
@@ -36,6 +38,17 @@ public class FunkoService(
 
     public async Task<Result<FunkoResponseDto, DomainError>> Add(FunkoCreateRequest request) {
         log.LogInformation("Creando funko: {@Funko}", request);
+        
+        var categoria = await repoCategoria.GetById(request.CategoriaId);
+        if (categoria.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("La categoría especificada no existe o está eliminada"));
+
+        var proveedor = await repoProveedor.GetById(request.ProveedorId);
+        if (proveedor.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("El proveedor especificado no existe o está eliminado"));
+
         var validation = await createValidation.ValidateAsync(request);
         if (!validation.IsValid) {
             log.LogWarning("Validación fallida al crear funko: {@Errors}", validation.Errors);
@@ -48,6 +61,25 @@ public class FunkoService(
 
     public async Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest request) {
         log.LogInformation("Actualizando funko {Id}: {@Funko}", id, request);
+        
+        var funkoExistente = await repo.GetByIdAsync(id);
+        if (funkoExistente.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(funkoExistente.Error);
+
+        if (funkoExistente.Value.IsDeleted)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("No se puede actualizar un funko eliminado"));
+
+        var categoria = await repoCategoria.GetById(request.CategoriaId);
+        if (categoria.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("La categoría especificada no existe o está eliminada"));
+
+        var proveedor = await repoProveedor.GetById(request.ProveedorId);
+        if (proveedor.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("El proveedor especificado no existe o está eliminado"));
+
         var validation = await updateValidation.ValidateAsync(request);
         if (!validation.IsValid) {
             log.LogWarning("Validación fallida al actualizar funko {Id}: {@Errors}", id, validation.Errors);
@@ -93,4 +125,5 @@ public class FunkoService(
 
         return actualizado.Map(f => f.ToDto());
     }
+    
 }

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FunkoApiV._2.Repository;
 
-public class CategoriaRepository(AppDbContext context) : ICategoriaRepository, IScopedService {
+public class  CategoriaRepository(AppDbContext context) : ICategoriaRepository, IScopedService {
     public async Task<(IReadOnlyList<Categoria> Items, int Total)> GetPagedAsync(CategoriaFilterRequest filter) {
         IQueryable<Categoria> query = context.Categorias.AsNoTracking();
 

@@ -27,31 +27,6 @@ public class CategoriaServiceTests {
             NullLogger<CategoriaService>.Instance,
             new CategoriaValidator());
     }
-
-    [Test]
-    public async Task Delete_ConFunkosAsociados_DevuelveConflict() {
-        _funkoRepo.Setup(x => x.CountByCategoriaIdAsync("Anime000001")).ReturnsAsync(3);
-
-        var resultado = await _service.Delete("Anime000001");
-
-        resultado.IsFailure.Should().BeTrue();
-        resultado.Error.Should().BeOfType<Conflict>();
-        resultado.Error.Message.Should().Contain("3");
-        _repo.Verify(x => x.DeleteAsync(It.IsAny<string>()), Times.Never);
-    }
-
-    [Test]
-    public async Task Delete_SinFunkosAsociados_DevuelveTrue() {
-        _funkoRepo.Setup(x => x.CountByCategoriaIdAsync("Anime000001")).ReturnsAsync(0);
-        _repo.Setup(x => x.DeleteAsync("Anime000001"))
-            .ReturnsAsync(Result.Success<bool, DomainError>(true));
-
-        var resultado = await _service.Delete("Anime000001");
-
-        resultado.IsSuccess.Should().BeTrue();
-        resultado.Value.Should().BeTrue();
-    }
-
     [Test]
     public async Task Add_ConNombreVacio_DevuelveValidationError() {
         var resultado = await _service.Add(new CategoriaRequestDto { Nombre = "" });

@@ -58,15 +58,10 @@ public class CategoriaService(
 
     public async Task<Result<bool, DomainError>> Delete(string id) {
         log.LogInformation("Eliminando categoría: {@Id}", id);
-
-        // Regla de negocio: no se puede borrar una categoría con funkos activos.
-        var funkos = await funkoRepo.CountByCategoriaIdAsync(id);
-        if (funkos > 0) {
-            log.LogWarning("No se puede eliminar la categoría {Id}: tiene {Funkos} funkos", id, funkos);
+        var paged = await funkoRepo.GetPagedAsync(new FunkoFilterRequest { CategoriaId = id, Page = 0, Size = 1 });
+        if (paged.Total > 0) 
             return Result.Failure<bool, DomainError>(
-                new Conflict($"No se puede eliminar la categoría: tiene {funkos} funko(s) asociado(s)"));
-        }
-
+                new Conflict("No se puede borrar la categoria si hay un funko asociado"));
         return await repo.DeleteAsync(id);
     }
 }

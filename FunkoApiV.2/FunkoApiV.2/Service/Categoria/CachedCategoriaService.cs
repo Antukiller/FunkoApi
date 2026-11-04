@@ -41,10 +41,7 @@ public class CachedCategoriaService(
             return result;
 
         await cache.RemoveAsync(ByIdKey(id));
-
-        // Los DTOs de funko incluyen el nombre de la categoría: hay que invalidarlos.
-        foreach (var funkoId in await funkoRepo.GetIdsByCategoriaIdAsync(id))
-            await cache.RemoveAsync($"funko:{funkoId}");
+        
 
         return result;
     }

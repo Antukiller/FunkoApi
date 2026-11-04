@@ -63,16 +63,4 @@ public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorR
         return Result.Success<bool, DomainError>(true);
     }
 
-    public async Task<Result<bool, DomainError>> Restore(string id) {
-        log.LogDebug("Restaurando proveedor con id: {id} ", id);
-        var proveedor = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && p.IsDeleted);
-        if (proveedor is null) 
-            return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Proveedor"));
-        proveedor.IsDeleted = false;
-        proveedor.UpdatedAt = DateTime.UtcNow;
-        await context.SaveChangesAsync();
-        log.LogDebug("Proveedor restaurado exitosamente");
-        return Result.Success<bool, DomainError>(true);
-        
-    }
 }

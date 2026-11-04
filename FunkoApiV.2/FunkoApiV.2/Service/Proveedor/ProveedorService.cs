@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using FluentValidation;
+using FunkoApiV._2.Dto;
 using FunkoApiV._2.Dto.Proveedor;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Infrastructure.Interfaces;
@@ -10,6 +11,7 @@ namespace FunkoApiV._2.Service;
 
 public class ProveedorService(
     IProveedorRepository repo,
+    IFunkoRepository funkoRepo,
     ILogger<ProveedorService> log,
     IValidator<ProveedorRequestDto> validator) : IProveedorService, IScopedService {
     public async Task<IReadOnlyList<ProveedorResponseDto>> GetAll() {
@@ -57,11 +59,19 @@ public class ProveedorService(
 
     public async Task<Result<bool, DomainError>> SoftDelete(string id) {
         log.LogDebug("Eliminando proeedor con id: {@Id}", id);
+        var tieneFunkos = await TieneFunkos(id);
+        if (tieneFunkos.IsFailure) {
+            return tieneFunkos;
+        }
         return await repo.SoftDelete(id);
     }
 
-    public async Task<Result<bool, DomainError>> Restore(string id) {
-        log.LogDebug("Restaurando proveedor con id: {@Id}", id);
-        return await repo.Restore(id);
-    }
+    private async Task<Result<bool, DomainError>> TieneFunkos(string id) {
+        var paged = await funkoRepo.GetPagedAsync(
+            new FunkoFilterRequest { ProveedorId = id, Page = 0, Size = 1 });
+        if (paged.Total > 0)
+            return Result.Failure<bool, DomainError>(
+                new Conflict("No se puede borrar el proveedor si hay un funko asociado"));
+        return Result.Success<bool, DomainError>(true);
+    } 
 }

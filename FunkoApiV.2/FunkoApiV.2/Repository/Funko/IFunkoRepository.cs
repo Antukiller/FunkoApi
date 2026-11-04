@@ -17,8 +17,4 @@ public interface IFunkoRepository {
     Task<Result<Funko, DomainError>> SetImagenAsync(int id, string imagen);
 
     Task<Result<bool, DomainError>> DeleteAsync(int id);
-
-    Task<int> CountByCategoriaIdAsync(string categoriaId);
-
-    Task<IReadOnlyList<int>> GetIdsByCategoriaIdAsync(string categoriaId);
 }

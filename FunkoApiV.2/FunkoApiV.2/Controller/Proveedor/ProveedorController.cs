@@ -48,14 +48,4 @@ public class ProveedorController(IProveedorService ser) : ControllerBase {
             ? NoContent()
             : result.Error.TopHttpResult<bool>();
     }
-    [HttpPost("{id}/restore")]
-    public async Task<ActionResult<bool>>  Restore(string id) {
-        var result = await ser.Restore(id);
-        if (result.IsSuccess) return Ok(result.Value);
-        var err = result.Error;
-        return result.Error switch {
-            NotFound notFound => NotFound(new { message = notFound.Message }),
-            _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = err.Message })
-        };
-    }
 }
