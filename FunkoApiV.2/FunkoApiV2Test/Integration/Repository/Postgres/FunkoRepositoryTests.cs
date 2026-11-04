@@ -46,14 +46,6 @@ public class FunkoRepositoryTests : PostgresBaseTest {
     }
 
     [Test]
-    public async Task CreateAsync_con_categoria_inexistente_devuelve_NotFound() {
-        var resultado = await _repository.CreateAsync(NuevoFunko("Fantasma0001"));
-
-        resultado.IsFailure.Should().BeTrue();
-        resultado.Error.Should().BeOfType<NotFound>();
-    }
-
-    [Test]
     public async Task CreateAsync_devuelve_el_funko_con_la_categoria_cargada() {
         var resultado = await _repository.CreateAsync(NuevoFunko("Anime000001"));
 

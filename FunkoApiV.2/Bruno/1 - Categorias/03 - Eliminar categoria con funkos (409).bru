@@ -1,0 +1,20 @@
+meta {
+  name: Eliminar categoria con funkos (409)
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/api/categorias/{{categoriaId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+  test("mensaje menciona funkos", function() {
+    expect(res.body.message).to.include("funko");
+  });
+}

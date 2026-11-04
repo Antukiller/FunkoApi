@@ -28,7 +28,7 @@ public abstract class PostgresBaseTest {
     [SetUp]
     public async Task SetUp() {
         Context.ChangeTracker.Clear();
-        await Context.Database.EnsureDeletedAsync();
+        await Context.Database.ExecuteSqlRawAsync("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
         await Context.Database.EnsureCreatedAsync();
     }
 

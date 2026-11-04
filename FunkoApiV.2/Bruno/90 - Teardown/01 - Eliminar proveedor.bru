@@ -1,0 +1,17 @@
+meta {
+  name: Eliminar proveedor (teardown)
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/api/Proveedor/{{proveedorIdCreado}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

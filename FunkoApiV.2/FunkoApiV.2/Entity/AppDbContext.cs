@@ -63,6 +63,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             e.Property(x => x.Descripcion)
                 .HasMaxLength(500);
+
+            e.Property(x => x.IsDeleted)
+                .IsRequired()
+                .HasDefaultValue(false);
+            e.HasQueryFilter(c => !c.IsDeleted);
+
             var seedDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
             e.HasData(
                 new Categoria { Id = "Anime000001", Nombre = "Anime", Descripcion = "Personajes de series de anime y manga", CreatedAt = seedDate, IsDeleted = false },

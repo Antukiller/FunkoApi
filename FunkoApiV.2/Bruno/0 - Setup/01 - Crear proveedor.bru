@@ -1,0 +1,33 @@
+meta {
+  name: Crear proveedor (setup)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/Proveedor
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "nombre": "Proveedor Bruno Test",
+    "direccion": "Calle Bruno 1"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("proveedorIdCreado", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("devuelve id", function() {
+    expect(res.body.id).to.be.a("string");
+  });
+}

@@ -5,6 +5,7 @@ using FunkoApiV._2.Config;
 using FunkoApiV._2.Converters;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
+using FunkoApiV._2.Seeders;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.EntityFrameworkCore.Extensions;
 using Serilog;
@@ -64,6 +65,8 @@ public class Program {
         using (var scope = app.Services.CreateScope()) {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await db.Database.EnsureCreatedAsync();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            await DbSeeder.SeedAsync(db, logger);
         }
 
         app.UseHttpsRedirection();

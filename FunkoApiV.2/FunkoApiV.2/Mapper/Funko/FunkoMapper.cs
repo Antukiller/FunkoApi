@@ -11,6 +11,7 @@ public static class FunkoMapper {
         Precio = f.Precio,
         Stock = f.Stock,
         Imagen = f.Imagen,
+        Categoria = f.Categoria?.Nombre ?? string.Empty,
         CategoriaId = f.CategoriaId,
         ProveedorId = f.ProveedorId,
         CreatedAt = f.CreatedAt,

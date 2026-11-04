@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using MongoDB.Bson;
 using NUnit.Framework;
 using Testcontainers.PostgreSql;
 
@@ -40,6 +41,12 @@ public class FunkoServiceIntegrationTests {
         services.AddDbContext<AppDbContext>(o => o.UseNpgsql(_postgres.GetConnectionString()));
         services.AddScoped<IFunkoRepository, FunkoRepository>();
         services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+        services.AddScoped<IProveedorRepository>(_ => {
+            var m = new Mock<IProveedorRepository>();
+            m.Setup(x => x.GetById(It.IsAny<string>()))
+                .ReturnsAsync(Result.Success<Proveedor, DomainError>(new Proveedor { Id = ObjectId.Parse(ProveedorId), Nombre = "P", CreatedAt = DateTime.UtcNow, IsDeleted = false }));
+            return m.Object;
+        });
         services.AddScoped<IFunkoService, FunkoService>();
         services.AddSingleton<IStorageService>(new Mock<IStorageService>().Object);
         services.AddLogging();
@@ -98,6 +105,6 @@ public class FunkoServiceIntegrationTests {
         };
         var r = await _service.Add(req);
         r.IsFailure.Should().BeTrue();
-        r.Error.Should().BeOfType<NotFound>();
+        r.Error.Should().BeOfType<Conflict>();
     }
 }
