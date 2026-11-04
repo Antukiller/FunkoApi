@@ -1,9 +1,11 @@
 ﻿using FunkoApiV._2.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace FunkoApiV._2.Entity;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options) {
+public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser, IdentityRole<long>, long> {
     public DbSet<Funko> Funkos { get; set; }
     public DbSet<Categoria> Categorias { get; set; }
 

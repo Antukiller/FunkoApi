@@ -33,6 +33,7 @@ public class Program {
                 options.JsonSerializerOptions.Converters.Add(new ObjectIdJsonConverter());
             });
         
+        builder.Services.AddIdentityConfiguration(builder.Configuration);
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
         builder.Services.AddOpenApi();
@@ -71,6 +72,8 @@ public class Program {
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.MapControllers();
 
         await app.RunAsync();

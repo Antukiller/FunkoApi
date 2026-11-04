@@ -8,6 +8,7 @@ public static class DomainErrorExtensions {
         ValidationError => new BadRequestObjectResult(new { message = error.Message }),
         Conflict => new ConflictObjectResult(new { message = error.Message }),
         BusinessRuleError => new UnprocessableEntityObjectResult(new { message = error.Message }),
+        UnauthorizedError => new UnauthorizedObjectResult(new { message = error.Message }),
         _ => new ObjectResult(new { message = "Error interno del servidor" }) { StatusCode = 500 }
     };
 }
