@@ -2,6 +2,7 @@
 using FunkoApiV._2.Dto.Common;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FunkoApiV._2.Controller;
@@ -10,11 +11,10 @@ namespace FunkoApiV._2.Controller;
 [Route("api/funkos")]
 public class FunkoController(IFunkoService ser) : ControllerBase {
 
-    /// <summary>Listado paginado con filtros por nombre, categoría, proveedor, precio y stock.</summary>
     [HttpGet]
     public async Task<ActionResult<PagedResult<FunkoResponseDto>>> GetAll([FromQuery] FunkoFilterRequest filter) =>
         Ok(await ser.GetAll(filter));
-
+    [Authorize(Roles = "ADMIN")]
     [HttpGet("{id:int}")]
     public async Task<ActionResult<FunkoResponseDto>> GetById(int id) {
         var resultado = await ser.GetById(id);
@@ -22,7 +22,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             ? Ok(resultado.Value)
             : resultado.Error.TopHttpResult<FunkoResponseDto>();
     }
-
+    [Authorize(Roles = "ADMIN")]
     [HttpPost]
     public async Task<ActionResult<FunkoResponseDto>> Create([FromBody] FunkoCreateRequest funko) {
         var result = await ser.Add(funko);
@@ -30,7 +30,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
             : result.Error.TopHttpResult<FunkoResponseDto>();
     }
-
+    [Authorize(Roles = "ADMIN")]
     [HttpPut("{id:int}")]
     public async Task<ActionResult<FunkoResponseDto>> Update(int id, [FromBody] FunkoUpdateRequest funko) {
         var result = await ser.Update(id, funko);
@@ -38,7 +38,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             ? Ok(result.Value)
             : result.Error.TopHttpResult<FunkoResponseDto>();
     }
-
+    [Authorize(Roles = "ADMIN")]
     [HttpDelete("{id:int}")]
     public async Task<ActionResult<bool>> Delete(int id) {
         var result = await ser.Delete(id);
@@ -46,10 +46,6 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             ? NoContent()
             : result.Error.TopHttpResult<bool>();
     }
-
-    /// <summary>
-    /// Sube una imagen y devuelve la ruta relativa que hay que enviar al crear el funko.
-    /// </summary>
     [HttpPost("imagen")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<ImagenResponseDto>> UploadImagen([FromForm] IFormFile file) {
@@ -59,7 +55,6 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
             : result.Error.TopHttpResult<ImagenResponseDto>();
     }
 
-    /// <summary>Cambia la imagen de un funko existente.</summary>
     [HttpPatch("{id:int}/imagen")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<FunkoResponseDto>> UpdateImagen(int id, [FromForm] IFormFile file) {
