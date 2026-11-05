@@ -6,6 +6,7 @@ using FunkoApiV._2.Config;
 using FunkoApiV._2.Dto.Auth;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -18,7 +19,7 @@ public class AuthService(
     AppDbContext context, 
     UserManager<AppUser> userManager, 
     SignInManager<AppUser> signUser, 
-    IOptions<JwtSettings> options) : IAuthService {
+    IOptions<JwtSettings> options) : IAuthService, IScopedService {
     
     public async Task<Result<AuthResponseDto, DomainError>> Login(LoginDto loginDto) {
         Log.Information("Email: {Email} logeandose", loginDto.Email);
