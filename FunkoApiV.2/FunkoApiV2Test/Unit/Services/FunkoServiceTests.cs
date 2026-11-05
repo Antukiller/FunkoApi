@@ -169,6 +169,25 @@ public class FunkoServiceTests {
     }
 
     [Test]
+    public async Task GetById_Existente_DevuelveDtoMapeado() {
+        _repo.Setup(x => x.GetByIdAsync(1))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(new Funko {
+                Id = 1,
+                Name = "Kirito",
+                Precio = 15.99m,
+                CategoriaId = "Anime000001",
+                Categoria = CategoriaSeed,
+                ProveedorId = ProveedorId
+            }));
+
+        var resultado = await _service.GetById(1);
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Name.Should().Be("Kirito");
+        resultado.Value.Categoria.Should().Be("Anime");
+    }
+
+    [Test]
     public async Task Update_ConDatosValidos_DevuelveDtoActualizado() {
         var actualizado = new Funko {
             Id = 1, Name = "Kirito Act", Precio = 20m, Stock = 5,
@@ -221,6 +240,26 @@ public class FunkoServiceTests {
 
         resultado.IsFailure.Should().BeTrue();
         resultado.Error.Should().BeOfType<ValidationError>();
+        _repo.Verify(x => x.UpdateAsync(It.IsAny<int>(), It.IsAny<Funko>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Update_ConProveedorInexistente_DevuelveConflictYSinActualizar() {
+        _repo.Setup(x => x.GetByIdAsync(1))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(new Funko {
+                Id = 1, Name = "Kirito", CategoriaId = "Anime000001", ProveedorId = ProveedorId
+            }));
+
+        var resultado = await _service.Update(1, new FunkoUpdateRequest {
+            Name = "Kirito",
+            Precio = 15m,
+            Stock = 1,
+            CategoriaId = "Anime000001",
+            ProveedorId = "000000000000000000000000"
+        });
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<Conflict>();
         _repo.Verify(x => x.UpdateAsync(It.IsAny<int>(), It.IsAny<Funko>()), Times.Never);
     }
 
@@ -289,6 +328,71 @@ public class FunkoServiceTests {
 
         resultado.IsFailure.Should().BeTrue();
         _storage.Verify(x => x.DeleteFileAsync("/uploads/funkos/nueva.png"), Times.Once);
+    }
+
+    [Test]
+    public async Task UpdateImagen_SiNoExisteElFunko_NoGuardaImagen() {
+        _repo.Setup(x => x.GetByIdAsync(99))
+            .ReturnsAsync(Result.Failure<Funko, DomainError>(NotFound.FromId("99", "Funko")));
+
+        var resultado = await _service.UpdateImagen(99, new Mock<IFormFile>().Object);
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<NotFound>();
+        _storage.Verify(x => x.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task UpdateImagen_SiFallaElGuardado_NoActualizaNiBorraImagen() {
+        var anterior = new Funko {
+            Id = 1, CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            Imagen = "/uploads/funkos/vieja.png"
+        };
+        var file = new Mock<IFormFile>().Object;
+        _repo.Setup(x => x.GetByIdAsync(1))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(anterior));
+        _storage.Setup(x => x.SaveFileAsync(file, "funkos"))
+            .ReturnsAsync(Result.Failure<string, DomainError>(StorageError.ErrorGuardando()));
+
+        var resultado = await _service.UpdateImagen(1, file);
+
+        resultado.IsFailure.Should().BeTrue();
+        _repo.Verify(x => x.SetImagenAsync(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
+        _storage.Verify(x => x.DeleteFileAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task UpdateImagen_SinImagenAnterior_NoIntentaEliminarArchivo() {
+        var funko = new Funko {
+            Id = 1, CategoriaId = "Anime000001", ProveedorId = ProveedorId
+        };
+        var file = new Mock<IFormFile>().Object;
+        _repo.Setup(x => x.GetByIdAsync(1))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(funko));
+        _storage.Setup(x => x.SaveFileAsync(file, "funkos"))
+            .ReturnsAsync(Result.Success<string, DomainError>("/uploads/funkos/nueva.png"));
+        _repo.Setup(x => x.SetImagenAsync(1, "/uploads/funkos/nueva.png"))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(funko with {
+                Imagen = "/uploads/funkos/nueva.png"
+            }));
+
+        var resultado = await _service.UpdateImagen(1, file);
+
+        resultado.IsSuccess.Should().BeTrue();
+        _storage.Verify(x => x.DeleteFileAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task UploadImagen_ConArchivoValido_DelegaalStorageEnLaCarpetaFunko() {
+        var file = new Mock<IFormFile>().Object;
+        _storage.Setup(x => x.SaveFileAsync(file, "funkos"))
+            .ReturnsAsync(Result.Success<string, DomainError>("/uploads/funkos/nueva.png"));
+
+        var resultado = await _service.UploadImagen(file);
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Should().Be("/uploads/funkos/nueva.png");
+        _storage.Verify(x => x.SaveFileAsync(file, "funkos"), Times.Once);
     }
 
     [Test]

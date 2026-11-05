@@ -290,28 +290,28 @@ var assemblies = [
   {
     "name": "FunkoApiV.2",
     "classes": [
-      { "name": "FunkoApiMongo.Cache.RedisService", "rp": "FunkoApiV.2_RedisService.html", "cl": 0, "ucl": 40, "cal": 40, "tl": 57, "cb": 0, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiMongo.Config.CacheConfig", "rp": "FunkoApiV.2_CacheConfig.html", "cl": 0, "ucl": 4, "cal": 4, "tl": 12, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Config.FunkoConfig", "rp": "FunkoApiV.2_FunkoConfig.html", "cl": 0, "ucl": 10, "cal": 10, "tl": 24, "cb": 0, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Config.JwtSettings", "rp": "FunkoApiV.2_JwtSettings.html", "cl": 0, "ucl": 4, "cal": 4, "tl": 9, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Controller.Auth.AuthController", "rp": "FunkoApiV.2_AuthController.html", "cl": 0, "ucl": 22, "cal": 22, "tl": 55, "cb": 0, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Controller.CategoriaController", "rp": "FunkoApiV.2_CategoriaController.html", "cl": 0, "ucl": 26, "cal": 26, "tl": 48, "cb": 0, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Controller.FunkoController", "rp": "FunkoApiV.2_FunkoController.html", "cl": 14, "ucl": 24, "cal": 38, "tl": 66, "cb": 3, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Controller.ProveedorController", "rp": "FunkoApiV.2_ProveedorController.html", "cl": 0, "ucl": 33, "cal": 33, "tl": 56, "cb": 0, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiMongo.Cache.RedisService", "rp": "FunkoApiV.2_RedisService.html", "cl": 40, "ucl": 0, "cal": 40, "tl": 57, "cb": 8, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiMongo.Config.CacheConfig", "rp": "FunkoApiV.2_CacheConfig.html", "cl": 4, "ucl": 0, "cal": 4, "tl": 12, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Config.FunkoConfig", "rp": "FunkoApiV.2_FunkoConfig.html", "cl": 10, "ucl": 0, "cal": 10, "tl": 24, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Config.JwtSettings", "rp": "FunkoApiV.2_JwtSettings.html", "cl": 4, "ucl": 0, "cal": 4, "tl": 9, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Controller.Auth.AuthController", "rp": "FunkoApiV.2_AuthController.html", "cl": 22, "ucl": 0, "cal": 22, "tl": 55, "cb": 10, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Controller.CategoriaController", "rp": "FunkoApiV.2_CategoriaController.html", "cl": 26, "ucl": 0, "cal": 26, "tl": 48, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Controller.FunkoController", "rp": "FunkoApiV.2_FunkoController.html", "cl": 38, "ucl": 0, "cal": 38, "tl": 66, "cb": 12, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Controller.ProveedorController", "rp": "FunkoApiV.2_ProveedorController.html", "cl": 33, "ucl": 0, "cal": 33, "tl": 56, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Converters.ObjectIdJsonConverter", "rp": "FunkoApiV.2_ObjectIdJsonConverter.html", "cl": 0, "ucl": 7, "cal": 7, "tl": 17, "cb": 0, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Dto.Auth.AuthResponseDto", "rp": "FunkoApiV.2_AuthResponseDto.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Dto.Auth.LoginDto", "rp": "FunkoApiV.2_LoginDto.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Dto.Auth.SignupDto", "rp": "FunkoApiV.2_SignupDto.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Dto.Auth.UserDto", "rp": "FunkoApiV.2_UserDto.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Dto.CategoriaDto", "rp": "FunkoApiV.2_CategoriaDto.html", "cl": 5, "ucl": 2, "cal": 7, "tl": 35, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Dto.Auth.AuthResponseDto", "rp": "FunkoApiV.2_AuthResponseDto.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Dto.Auth.LoginDto", "rp": "FunkoApiV.2_LoginDto.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Dto.Auth.SignupDto", "rp": "FunkoApiV.2_SignupDto.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Dto.Auth.UserDto", "rp": "FunkoApiV.2_UserDto.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 6, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Dto.CategoriaDto", "rp": "FunkoApiV.2_CategoriaDto.html", "cl": 7, "ucl": 0, "cal": 7, "tl": 35, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.CategoriaFilterRequest", "rp": "FunkoApiV.2_CategoriaFilterRequest.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 35, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.CategoriaRequestDto", "rp": "FunkoApiV.2_CategoriaRequestDto.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 35, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.Common.PagedResult\u003CT\u003E", "rp": "FunkoApiV.2_PagedResult_1.html", "cl": 6, "ucl": 1, "cal": 7, "tl": 16, "cb": 1, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.FunkoCreateRequest", "rp": "FunkoApiV.2_FunkoCreateRequest.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 28, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.FunkoFilterRequest", "rp": "FunkoApiV.2_FunkoFilterRequest.html", "cl": 11, "ucl": 0, "cal": 11, "tl": 25, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.FunkoResponseDto", "rp": "FunkoApiV.2_FunkoResponseDto.html", "cl": 10, "ucl": 0, "cal": 10, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Dto.FunkoUpdateRequest", "rp": "FunkoApiV.2_FunkoUpdateRequest.html", "cl": 5, "ucl": 1, "cal": 6, "tl": 27, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Dto.ImagenResponseDto", "rp": "FunkoApiV.2_ImagenResponseDto.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Dto.FunkoUpdateRequest", "rp": "FunkoApiV.2_FunkoUpdateRequest.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 27, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Dto.ImagenResponseDto", "rp": "FunkoApiV.2_ImagenResponseDto.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.Proveedor.ProveedorRequestDto", "rp": "FunkoApiV.2_ProveedorRequestDto.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 14, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Dto.Proveedor.ProveedorResponseDto", "rp": "FunkoApiV.2_ProveedorResponseDto.html", "cl": 5, "ucl": 0, "cal": 5, "tl": 9, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Entity.AppDbContext", "rp": "FunkoApiV.2_AppDbContext.html", "cl": 58, "ucl": 0, "cal": 58, "tl": 69, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
@@ -319,42 +319,40 @@ var assemblies = [
       { "name": "FunkoApiV._2.Error.BusinessRuleError", "rp": "FunkoApiV.2_BusinessRuleError.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Error.Conflict", "rp": "FunkoApiV.2_Conflict.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Error.DomainError", "rp": "FunkoApiV.2_DomainError.html", "cl": 1, "ucl": 1, "cal": 2, "tl": 5, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Error.DomainErrorExtensions", "rp": "FunkoApiV.2_DomainErrorExtensions.html", "cl": 3, "ucl": 5, "cal": 8, "tl": 14, "cb": 1, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Error.InternalError", "rp": "FunkoApiV.2_InternalError.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Error.DomainErrorExtensions", "rp": "FunkoApiV.2_DomainErrorExtensions.html", "cl": 7, "ucl": 1, "cal": 8, "tl": 14, "cb": 9, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Error.InternalError", "rp": "FunkoApiV.2_InternalError.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Error.NotFound", "rp": "FunkoApiV.2_NotFound.html", "cl": 2, "ucl": 0, "cal": 2, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Error.StorageError", "rp": "FunkoApiV.2_StorageError.html", "cl": 1, "ucl": 6, "cal": 7, "tl": 24, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Error.UnauthorizedError", "rp": "FunkoApiV.2_UnauthorizedError.html", "cl": 0, "ucl": 1, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Error.StorageError", "rp": "FunkoApiV.2_StorageError.html", "cl": 6, "ucl": 1, "cal": 7, "tl": 24, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Error.UnauthorizedError", "rp": "FunkoApiV.2_UnauthorizedError.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Error.ValidationError", "rp": "FunkoApiV.2_ValidationError.html", "cl": 1, "ucl": 0, "cal": 1, "tl": 16, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Infrastructure.DependencerProvider", "rp": "FunkoApiV.2_DependencerProvider.html", "cl": 0, "ucl": 15, "cal": 15, "tl": 25, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Infrastructure.IdentityConfig", "rp": "FunkoApiV.2_IdentityConfig.html", "cl": 0, "ucl": 57, "cal": 57, "tl": 95, "cb": 0, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Infrastructure.IdentityConfig", "rp": "FunkoApiV.2_IdentityConfig.html", "cl": 57, "ucl": 0, "cal": 57, "tl": 95, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Mapper.CategoriaMapper", "rp": "FunkoApiV.2_CategoriaMapper.html", "cl": 13, "ucl": 0, "cal": 13, "tl": 21, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Mapper.FunkoMapper", "rp": "FunkoApiV.2_FunkoMapper.html", "cl": 21, "ucl": 9, "cal": 30, "tl": 41, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Mapper.FunkoMapper", "rp": "FunkoApiV.2_FunkoMapper.html", "cl": 30, "ucl": 0, "cal": 30, "tl": 41, "cb": 4, "tb": 4, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Mapper.Provedor.ProveedorMapper", "rp": "FunkoApiV.2_ProveedorMapper.html", "cl": 14, "ucl": 0, "cal": 14, "tl": 24, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Models.AppUser", "rp": "FunkoApiV.2_AppUser.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 9, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Models.AppUser", "rp": "FunkoApiV.2_AppUser.html", "cl": 3, "ucl": 0, "cal": 3, "tl": 9, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Models.Categoria", "rp": "FunkoApiV.2_Categoria.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 11, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Models.Funko", "rp": "FunkoApiV.2_Funko.html", "cl": 11, "ucl": 0, "cal": 11, "tl": 23, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Models.Proveedor", "rp": "FunkoApiV.2_Proveedor.html", "cl": 6, "ucl": 0, "cal": 6, "tl": 17, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Models.YouTubeIdValueGenerator", "rp": "FunkoApiV.2_YouTubeIdValueGenerator.html", "cl": 1, "ucl": 2, "cal": 3, "tl": 15, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Program", "rp": "FunkoApiV.2_Program.html", "cl": 0, "ucl": 41, "cal": 41, "tl": 89, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Repository.CategoriaRepository", "rp": "FunkoApiV.2_CategoriaRepository.html", "cl": 59, "ucl": 3, "cal": 62, "tl": 84, "cb": 11, "tb": 22, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Repository.FunkoRepository", "rp": "FunkoApiV.2_FunkoRepository.html", "cl": 66, "ucl": 23, "cal": 89, "tl": 119, "cb": 23, "tb": 50, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Repository.ProveedorRepository", "rp": "FunkoApiV.2_ProveedorRepository.html", "cl": 60, "ucl": 0, "cal": 60, "tl": 71, "cb": 12, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Repository.CategoriaRepository", "rp": "FunkoApiV.2_CategoriaRepository.html", "cl": 59, "ucl": 3, "cal": 62, "tl": 84, "cb": 13, "tb": 22, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Repository.FunkoRepository", "rp": "FunkoApiV.2_FunkoRepository.html", "cl": 64, "ucl": 25, "cal": 89, "tl": 119, "cb": 23, "tb": 50, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Repository.ProveedorRepository", "rp": "FunkoApiV.2_ProveedorRepository.html", "cl": 53, "ucl": 0, "cal": 53, "tl": 71, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Seeders.DbSeeder", "rp": "FunkoApiV.2_DbSeeder.html", "cl": 0, "ucl": 92, "cal": 92, "tl": 118, "cb": 0, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Seeders.IdentitySeeder", "rp": "FunkoApiV.2_IdentitySeeder.html", "cl": 0, "ucl": 45, "cal": 45, "tl": 68, "cb": 0, "tb": 12, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Service.AuthService", "rp": "FunkoApiV.2_AuthService.html", "cl": 0, "ucl": 76, "cal": 76, "tl": 115, "cb": 0, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Service.CachedCategoriaService", "rp": "FunkoApiV.2_CachedCategoriaService.html", "cl": 0, "ucl": 31, "cal": 31, "tl": 55, "cb": 0, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Service.AuthService", "rp": "FunkoApiV.2_AuthService.html", "cl": 76, "ucl": 0, "cal": 76, "tl": 115, "cb": 17, "tb": 20, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Service.CachedCategoriaService", "rp": "FunkoApiV.2_CachedCategoriaService.html", "cl": 31, "ucl": 0, "cal": 31, "tl": 55, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Service.CachedFunkoService", "rp": "FunkoApiV.2_CachedFunkoService.html", "cl": 24, "ucl": 9, "cal": 33, "tl": 57, "cb": 8, "tb": 10, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Service.CategoriaService", "rp": "FunkoApiV.2_CategoriaService.html", "cl": 25, "ucl": 21, "cal": 46, "tl": 67, "cb": 2, "tb": 6, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Service.FunkoService", "rp": "FunkoApiV.2_FunkoService.html", "cl": 59, "ucl": 31, "cal": 90, "tl": 129, "cb": 16, "tb": 28, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Service.Proveedor.CachedProveedorService", "rp": "FunkoApiV.2_CachedProveedorService.html", "cl": 0, "ucl": 48, "cal": 48, "tl": 65, "cb": 0, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Service.ProveedorService", "rp": "FunkoApiV.2_ProveedorService.html", "cl": 35, "ucl": 20, "cal": 55, "tl": 77, "cb": 6, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Storage.FileSystemStorageService", "rp": "FunkoApiV.2_FileSystemStorageService.html", "cl": 0, "ucl": 111, "cal": 111, "tl": 151, "cb": 0, "tb": 48, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Service.CategoriaService", "rp": "FunkoApiV.2_CategoriaService.html", "cl": 46, "ucl": 0, "cal": 46, "tl": 67, "cb": 6, "tb": 6, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Service.FunkoService", "rp": "FunkoApiV.2_FunkoService.html", "cl": 84, "ucl": 6, "cal": 90, "tl": 129, "cb": 25, "tb": 28, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Service.Proveedor.CachedProveedorService", "rp": "FunkoApiV.2_CachedProveedorService.html", "cl": 46, "ucl": 2, "cal": 48, "tl": 65, "cb": 14, "tb": 14, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Service.ProveedorService", "rp": "FunkoApiV.2_ProveedorService.html", "cl": 55, "ucl": 0, "cal": 55, "tl": 77, "cb": 8, "tb": 8, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Storage.FileSystemStorageService", "rp": "FunkoApiV.2_FileSystemStorageService.html", "cl": 102, "ucl": 9, "cal": 111, "tl": 151, "cb": 37, "tb": 48, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Validator.CategoriaValidator", "rp": "FunkoApiV.2_CategoriaValidator.html", "cl": 8, "ucl": 0, "cal": 8, "tl": 17, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Validator.FunkoCreateValidator", "rp": "FunkoApiV.2_FunkoCreateValidator.html", "cl": 22, "ucl": 0, "cal": 22, "tl": 34, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "FunkoApiV._2.Validator.FunkoUpdateValidator", "rp": "FunkoApiV.2_FunkoUpdateValidator.html", "cl": 20, "ucl": 1, "cal": 21, "tl": 34, "cb": 0, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
+      { "name": "FunkoApiV._2.Validator.FunkoUpdateValidator", "rp": "FunkoApiV.2_FunkoUpdateValidator.html", "cl": 21, "ucl": 0, "cal": 21, "tl": 34, "cb": 2, "tb": 2, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
       { "name": "FunkoApiV._2.Validator.Proveedor.ProveedorValidator", "rp": "FunkoApiV.2_ProveedorValidator.html", "cl": 10, "ucl": 0, "cal": 10, "tl": 18, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "Microsoft.AspNetCore.OpenApi.Generated", "rp": "FunkoApiV.2_Generated.html", "cl": 0, "ucl": 380, "cal": 380, "tl": 605, "cb": 0, "tb": 204, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
-      { "name": "System.Runtime.CompilerServices", "rp": "FunkoApiV.2_CompilerServices.html", "cl": 0, "ucl": 3, "cal": 3, "tl": 23, "cb": 0, "tb": 0, "cm": 0, "fcm": 0, "tm": 0, "lch": [], "bch": [], "mch": [], "mfch": [], "hc": [], "metrics": { } },
     ]},
 ];
 
@@ -369,52 +367,10 @@ var riskHotspotMetrics = [
 
 var riskHotspots = [
   {
-    "assembly": "FunkoApiV.2", "class": "Microsoft.AspNetCore.OpenApi.Generated", "reportPath": "FunkoApiV.2_Generated.html", "methodName": "TransformAsync(Microsoft.OpenApi.OpenApiOperation,Microsoft.AspNetCore.OpenApi.OpenApiOperationTransformerContext,System.Threading.CancellationToken)", "methodShortName": "TransformAsync(...)", "fileIndex": 0, "line": 345,
-    "metrics": [
-      { "value": 8556, "exceeded": true },
-      { "value": 92, "exceeded": true },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "Microsoft.AspNetCore.OpenApi.Generated", "reportPath": "FunkoApiV.2_Generated.html", "methodName": "TransformAsync(Microsoft.OpenApi.OpenApiSchema,Microsoft.AspNetCore.OpenApi.OpenApiSchemaTransformerContext,System.Threading.CancellationToken)", "methodShortName": "TransformAsync(...)", "fileIndex": 0, "line": 510,
-    "metrics": [
-      { "value": 1190, "exceeded": true },
-      { "value": 34, "exceeded": true },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "Microsoft.AspNetCore.OpenApi.Generated", "reportPath": "FunkoApiV.2_Generated.html", "methodName": "GetTypeDocId(System.Type,System.Boolean,System.Boolean)", "methodShortName": "GetTypeDocId(...)", "fileIndex": 0, "line": 238,
-    "metrics": [
-      { "value": 812, "exceeded": true },
-      { "value": 28, "exceeded": true },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "Microsoft.AspNetCore.OpenApi.Generated", "reportPath": "FunkoApiV.2_Generated.html", "methodName": "CreateDocumentationId(System.Reflection.MethodInfo)", "methodShortName": "CreateDocumentationId(...)", "fileIndex": 0, "line": 168,
-    "metrics": [
-      { "value": 342, "exceeded": true },
-      { "value": 18, "exceeded": true },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Storage.FileSystemStorageService", "reportPath": "FunkoApiV.2_FileSystemStorageService.html", "methodName": "ValidateFile(Microsoft.AspNetCore.Http.IFormFile)", "methodShortName": "ValidateFile(...)", "fileIndex": 0, "line": 43,
-    "metrics": [
-      { "value": 272, "exceeded": true },
-      { "value": 16, "exceeded": true },
-    ]},
-  {
     "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Seeders.IdentitySeeder", "reportPath": "FunkoApiV.2_IdentitySeeder.html", "methodName": "SeedAsync()", "methodShortName": "SeedAsync()", "fileIndex": 0, "line": 13,
     "metrics": [
       { "value": 156, "exceeded": true },
       { "value": 12, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Storage.FileSystemStorageService", "reportPath": "FunkoApiV.2_FileSystemStorageService.html", "methodName": ".ctor(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.Extensions.Logging.ILogger\u00601\u003CFunkoApiV._2.Storage.FileSystemStorageService\u003E,Microsoft.AspNetCore.Hosting.IWebHostEnvironment)", "methodShortName": ".ctor(...)", "fileIndex": 0, "line": 16,
-    "metrics": [
-      { "value": 156, "exceeded": true },
-      { "value": 12, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "Microsoft.AspNetCore.OpenApi.Generated", "reportPath": "FunkoApiV.2_Generated.html", "methodName": "CreateDocumentationId(System.Reflection.PropertyInfo)", "methodShortName": "CreateDocumentationId(...)", "fileIndex": 0, "line": 100,
-    "metrics": [
-      { "value": 110, "exceeded": true },
-      { "value": 10, "exceeded": false },
     ]},
   {
     "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Seeders.DbSeeder", "reportPath": "FunkoApiV.2_DbSeeder.html", "methodName": "SeedAsync()", "methodShortName": "SeedAsync()", "fileIndex": 0, "line": 16,
@@ -429,64 +385,10 @@ var riskHotspots = [
       { "value": 28, "exceeded": true },
     ]},
   {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiMongo.Cache.RedisService", "reportPath": "FunkoApiV.2_RedisService.html", "methodName": "GetOrSetAsync()", "methodShortName": "GetOrSetAsync()", "fileIndex": 0, "line": 40,
+    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Storage.FileSystemStorageService", "reportPath": "FunkoApiV.2_FileSystemStorageService.html", "methodName": "ValidateFile(Microsoft.AspNetCore.Http.IFormFile)", "methodShortName": "ValidateFile(...)", "fileIndex": 0, "line": 43,
     "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Controller.Auth.AuthController", "reportPath": "FunkoApiV.2_AuthController.html", "methodName": "GetMe()", "methodShortName": "GetMe()", "fileIndex": 0, "line": 43,
-    "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Service.AuthService", "reportPath": "FunkoApiV.2_AuthService.html", "methodName": "GetMe()", "methodShortName": "GetMe()", "fileIndex": 0, "line": 77,
-    "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Service.AuthService", "reportPath": "FunkoApiV.2_AuthService.html", "methodName": "Login()", "methodShortName": "Login()", "fileIndex": 0, "line": 24,
-    "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Storage.FileSystemStorageService", "reportPath": "FunkoApiV.2_FileSystemStorageService.html", "methodName": "GetRelativePath(System.String,System.String)", "methodShortName": "GetRelativePath(...)", "fileIndex": 0, "line": 142,
-    "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Storage.FileSystemStorageService", "reportPath": "FunkoApiV.2_FileSystemStorageService.html", "methodName": "SaveFileAsync()", "methodShortName": "SaveFileAsync()", "fileIndex": 0, "line": 61,
-    "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "Microsoft.AspNetCore.OpenApi.Generated", "reportPath": "FunkoApiV.2_Generated.html", "methodName": "NormalizeDocId(System.String)", "methodShortName": "NormalizeDocId(...)", "fileIndex": 0, "line": 320,
-    "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "Microsoft.AspNetCore.OpenApi.Generated", "reportPath": "FunkoApiV.2_Generated.html", "methodName": "UnwrapOpenApiParameter(Microsoft.OpenApi.IOpenApiParameter)", "methodShortName": "UnwrapOpenApiParameter(...)", "fileIndex": 0, "line": 483,
-    "metrics": [
-      { "value": 42, "exceeded": true },
-      { "value": 6, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Service.FunkoService", "reportPath": "FunkoApiV.2_FunkoService.html", "methodName": "Update()", "methodShortName": "Update()", "fileIndex": 0, "line": 62,
-    "metrics": [
-      { "value": 36, "exceeded": true },
-      { "value": 10, "exceeded": false },
-    ]},
-  {
-    "assembly": "FunkoApiV.2", "class": "FunkoApiV._2.Error.DomainErrorExtensions", "reportPath": "FunkoApiV.2_DomainErrorExtensions.html", "methodName": "TopHttpResult(FunkoApiV._2.Error.DomainError)", "methodShortName": "TopHttpResult(...)", "fileIndex": 0, "line": 6,
-    "metrics": [
-      { "value": 34, "exceeded": true },
-      { "value": 10, "exceeded": false },
+      { "value": 16, "exceeded": false },
+      { "value": 16, "exceeded": true },
     ]},
 ];
 

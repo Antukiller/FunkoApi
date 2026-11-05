@@ -9,6 +9,7 @@ using FunkoApiV._2.Repository;
 using FunkoApiV._2.Service;
 using FunkoApiV._2.Storage;
 using FunkoApiV._2.Validator;
+using FunkoApiV2Test.Integration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -31,8 +32,10 @@ public class FunkoServiceIntegrationTests {
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp() {
-        _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
-        await _postgres.StartAsync();
+        await DockerTestPrerequisite.StartContainerOrIgnoreAsync(async () => {
+            _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
+            await _postgres.StartAsync();
+        });
     }
 
     [SetUp]
@@ -77,12 +80,17 @@ public class FunkoServiceIntegrationTests {
 
     [TearDown]
     public async Task TearDown() {
-        await _db.DisposeAsync();
-        await _sp.DisposeAsync();
+        if (_db is not null)
+            await _db.DisposeAsync();
+        if (_sp is not null)
+            await _sp.DisposeAsync();
     }
 
     [OneTimeTearDown]
-    public async Task OneTimeTearDown() => await _postgres.DisposeAsync();
+    public async Task OneTimeTearDown() {
+        if (_postgres is not null)
+            await _postgres.DisposeAsync();
+    }
 
     [Test]
     public async Task CreateAsync_ConDatosValidos_CreaYDevuelveDto() {
