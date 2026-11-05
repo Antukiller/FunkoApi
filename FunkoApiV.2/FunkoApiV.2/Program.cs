@@ -63,11 +63,19 @@ public class Program {
         app.MapOpenApi();
 
         // 9. Esquema + seed de Postgres
+        // 9. Esquema + seed de Postgres, Mongo e Identity
         using (var scope = app.Services.CreateScope()) {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await db.Database.EnsureCreatedAsync();
+            var dbMongo = scope.ServiceProvider.GetRequiredService<AppDbContextMongoDb>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            await DbSeeder.SeedAsync(db, logger);
+
+            await db.Database.EnsureCreatedAsync();
+
+            // Datos de negocio (categorías, proveedores, funkos)
+            await DbSeeder.SeedAsync(db, dbMongo, logger);
+
+            // Roles y usuarios de Identity (contraseña hasheada correctamente)
+            await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
         }
 
         app.UseHttpsRedirection();
