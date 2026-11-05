@@ -1,6 +1,7 @@
 using CSharpFunctionalExtensions;
 using FluentAssertions;
 using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Models;
 using FunkoApiV._2.Repository;
@@ -105,12 +106,134 @@ public class FunkoServiceTests {
     }
 
     [Test]
+    public async Task Add_ConStockCero_DevuelveDto() {
+        var creado = new Funko {
+            Id = 2, Name = "Kirito", Precio = 0.01m, Stock = 0,
+            Imagen = "/uploads/funkos/a.png", CategoriaId = "Anime000001",
+            ProveedorId = ProveedorId, Categoria = CategoriaSeed, CreatedAt = DateTime.UtcNow
+        };
+        _repo.Setup(x => x.CreateAsync(It.IsAny<Funko>()))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(creado));
+
+        var resultado = await _service.Add(CreateRequest() with { Precio = 0.01m, Stock = 0 });
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Stock.Should().Be(0);
+        _repo.Verify(x => x.CreateAsync(It.Is<Funko>(f => f.Stock == 0)), Times.Once);
+    }
+
+    [TestCase(-1)]
+    [TestCase(50.01)]
+    public async Task Add_ConPrecioFueraDeRango_DevuelveValidationError(decimal precio) {
+        var resultado = await _service.Add(CreateRequest() with { Precio = precio });
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<ValidationError>();
+        _repo.Verify(x => x.CreateAsync(It.IsAny<Funko>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Add_ConStockNegativo_DevuelveValidationError() {
+        var resultado = await _service.Add(CreateRequest() with { Stock = -1 });
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<ValidationError>();
+        _repo.Verify(x => x.CreateAsync(It.IsAny<Funko>()), Times.Never);
+    }
+
+    [Test]
+    public async Task GetAll_DevuelvePaginaYMapeaLosFunkos() {
+        var funko = new Funko {
+            Id = 1, Name = "Kirito", Precio = 15.99m, Stock = 10,
+            CategoriaId = "Anime000001", Categoria = CategoriaSeed,
+            ProveedorId = ProveedorId, CreatedAt = DateTime.UtcNow
+        };
+        var filtro = new FunkoFilterRequest { Page = 1, Size = 5 };
+        _repo.Setup(x => x.GetPagedAsync(filtro)).ReturnsAsync((new List<Funko> { funko }, 6));
+
+        var resultado = await _service.GetAll(filtro);
+
+        resultado.TotalCount.Should().Be(6);
+        resultado.Page.Should().Be(1);
+        resultado.PageSize.Should().Be(5);
+        resultado.Items.Should().ContainSingle().Which.Name.Should().Be("Kirito");
+    }
+
+    [Test]
     public async Task GetById_Inexistente_DevuelveNotFound() {
         _repo.Setup(x => x.GetByIdAsync(99))
             .ReturnsAsync(Result.Failure<Funko, DomainError>(NotFound.FromId("99", "Funko")));
         var resultado = await _service.GetById(99);
         resultado.IsFailure.Should().BeTrue();
         resultado.Error.Should().BeOfType<NotFound>();
+    }
+
+    [Test]
+    public async Task Update_ConDatosValidos_DevuelveDtoActualizado() {
+        var actualizado = new Funko {
+            Id = 1, Name = "Kirito Act", Precio = 20m, Stock = 5,
+            CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            Categoria = CategoriaSeed, CreatedAt = DateTime.UtcNow
+        };
+        _repo.Setup(x => x.GetByIdAsync(1))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(actualizado with { Name = "Kirito" }));
+        _repo.Setup(x => x.UpdateAsync(1, It.IsAny<Funko>()))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(actualizado));
+
+        var resultado = await _service.Update(1, new FunkoUpdateRequest {
+            Name = "Kirito Act", Precio = 20m, Stock = 5,
+            CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            Imagen = "https://ejemplo.com/funko.png"
+        });
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Name.Should().Be("Kirito Act");
+        _repo.Verify(x => x.UpdateAsync(1, It.IsAny<Funko>()), Times.Once);
+    }
+
+    [Test]
+    public async Task Update_ConFunkoInexistente_DevuelveNotFound() {
+        _repo.Setup(x => x.GetByIdAsync(99))
+            .ReturnsAsync(Result.Failure<Funko, DomainError>(NotFound.FromId("99", "Funko")));
+
+        var resultado = await _service.Update(99, new FunkoUpdateRequest {
+            Name = "Kirito Act", Precio = 20m, Stock = 5,
+            CategoriaId = "Anime000001", ProveedorId = ProveedorId
+        });
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<NotFound>();
+        _repo.Verify(x => x.UpdateAsync(It.IsAny<int>(), It.IsAny<Funko>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Update_ConDatosInvalidos_DevuelveValidationError() {
+        _repo.Setup(x => x.GetByIdAsync(1))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(new Funko {
+                Id = 1, Name = "Kirito", Precio = 15.99m, Stock = 10,
+                CategoriaId = "Anime000001", ProveedorId = ProveedorId
+            }));
+
+        var resultado = await _service.Update(1, new FunkoUpdateRequest {
+            Name = "", Precio = 0m, Stock = -1,
+            CategoriaId = "Anime000001", ProveedorId = ProveedorId
+        });
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<ValidationError>();
+        _repo.Verify(x => x.UpdateAsync(It.IsAny<int>(), It.IsAny<Funko>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Delete_ConFunkoExistente_DevuelveExito() {
+        _repo.Setup(x => x.DeleteAsync(1))
+            .ReturnsAsync(Result.Success<bool, DomainError>(true));
+
+        var resultado = await _service.Delete(1);
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Should().BeTrue();
+        _repo.Verify(x => x.DeleteAsync(1), Times.Once);
     }
 
     [Test]

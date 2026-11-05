@@ -56,6 +56,22 @@ public class FunkoServiceIntegrationTests {
         _db = _sp.GetRequiredService<AppDbContext>();
         await _db.Database.ExecuteSqlRawAsync("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
         await _db.Database.EnsureCreatedAsync();
+        _db.Categorias.Add(new FunkoApiV._2.Models.Categoria {
+            Id = "Anime000001",
+            Nombre = "Anime",
+            Descripcion = "Personajes de series de anime y manga",
+            CreatedAt = DateTime.UtcNow
+        });
+        _db.Funkos.Add(new FunkoApiV._2.Models.Funko {
+            Name = "Kirito",
+            Precio = 15.99m,
+            Stock = 10,
+            Imagen = "/uploads/funkos/placeholder.png",
+            CategoriaId = "Anime000001",
+            ProveedorId = ProveedorId,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
         _service = _sp.GetRequiredService<IFunkoService>();
     }
 

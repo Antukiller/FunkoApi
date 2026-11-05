@@ -1,4 +1,5 @@
 using FunkoApiV._2.Entity;
+using FunkoApiV._2.Models;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 
@@ -30,6 +31,26 @@ public abstract class PostgresBaseTest {
         Context.ChangeTracker.Clear();
         await Context.Database.ExecuteSqlRawAsync("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
         await Context.Database.EnsureCreatedAsync();
+        Context.Categorias.AddRange(
+            new Categoria {
+                Id = "Anime000001",
+                Nombre = "Anime",
+                Descripcion = "Personajes de series de anime y manga",
+                CreatedAt = DateTime.UtcNow
+            },
+            new Categoria {
+                Id = "Videojuego1",
+                Nombre = "Videojuegos",
+                Descripcion = "Personajes de consolas y PC",
+                CreatedAt = DateTime.UtcNow
+            },
+            new Categoria {
+                Id = "Peliculas01",
+                Nombre = "Películas",
+                Descripcion = "Cine y series de televisión",
+                CreatedAt = DateTime.UtcNow
+            });
+        await Context.SaveChangesAsync();
     }
 
     [OneTimeTearDown]
