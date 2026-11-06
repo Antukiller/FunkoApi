@@ -5,6 +5,7 @@ using FunkoApiV._2.Config;
 using FunkoApiV._2.Converters;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
+using FunkoApiV._2.Infrastructure.Cassandra;
 using FunkoApiV._2.Seeders;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.EntityFrameworkCore.Extensions;
@@ -44,6 +45,9 @@ public class Program {
 
         builder.Services.AddDbContext<AppDbContextMongoDb>(options =>
             options.UseMongoDB(FunkoConfig.MongoConnection, FunkoConfig.MongoDatabase));
+        
+        builder.Services.AddCassandra(builder.Configuration);
+        
 
         // 5. Caché (Redis, sin bifurcar por entorno)
         builder.Services.Configure<CacheConfig>(
@@ -68,11 +72,23 @@ public class Program {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var dbMongo = scope.ServiceProvider.GetRequiredService<AppDbContextMongoDb>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            var cassandraSession = scope.ServiceProvider.GetRequiredService<Cassandra.ISession>();
+            var cassandraSettings = scope.ServiceProvider.GetRequiredService<CassandraSettings>();
+
+            await cassandraSession.InitializeSchemaAsync(cassandraSettings.Keyspace);
 
             await db.Database.EnsureCreatedAsync();
 
             // Datos de negocio (categorías, proveedores, funkos)
             await DbSeeder.SeedAsync(db, dbMongo, logger);
+            // Datos de negocio (categorías, proveedores, funkos)
+            await DbSeeder.SeedAsync(db, dbMongo, logger);
+
+            // Read model de Cassandra (se reconstruye desde Postgres + Mongo)
+            await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
+
+            // Roles y usuarios de Identity (contraseña hasheada correctamente)
+            await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
 
             // Roles y usuarios de Identity (contraseña hasheada correctamente)
             await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);

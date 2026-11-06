@@ -1,0 +1,3236 @@
+﻿
+=== ARCHIVO: ICacheService.cs ===
+
+namespace FunkoApiMongo.Cache;
+
+public interface ICacheService {
+    Task<T?> GetAsync<T>(string cacheKey, CancellationToken token = default);
+    Task SetAsync<T>(string cacheKey, T value,TimeSpan? expiration = null, CancellationToken token = default);
+    Task RemoveAsync(string cacheKey, CancellationToken token = default);
+    Task<bool> ExistsAsync(string cacheKey, CancellationToken token = default);
+    Task<T?> GetOrSetAsync<T>(string cacheKey, Func<Task<T?>> factory, CancellationToken token = default,  TimeSpan? expiration = null);
+}
+
+=== ARCHIVO: RedisService.cs ===
+
+using System.Text.Json;
+using FunkoApiMongo.Config;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
+
+namespace FunkoApiMongo.Cache;
+
+public class RedisService(IDistributedCache cache, IOptions<CacheConfig> option) : ICacheService, ISingletonService {
+    private readonly CacheConfig _config = option.Value;
+    private readonly SemaphoreSlim _factory = new(1, 1);
+    
+    private readonly JsonSerializerOptions _jsonOptions = new() {
+        PropertyNameCaseInsensitive = true
+    };
+    
+    public async Task<T?> GetAsync<T>(string cacheKey, CancellationToken token = default) {
+        var data = await cache.GetStringAsync(cacheKey, token);
+        return string.IsNullOrEmpty(data) ? default : JsonSerializer.Deserialize<T>(data, _jsonOptions);
+    }
+
+    public async Task SetAsync<T>(string cacheKey, T value, TimeSpan? expiration = null, CancellationToken token = default) {
+        var entryOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = expiration ?? _config.DefaultExpiration,
+            SlidingExpiration = _config.SlidingExpiration
+        };
+        await cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(value, _jsonOptions), entryOptions, token);
+    }
+
+    public async Task RemoveAsync(string cacheKey, CancellationToken token = default) {
+        await cache.RemoveAsync(cacheKey, token);
+    }
+
+    public async Task<bool> ExistsAsync(string cacheKey, CancellationToken token = default) {
+        var data = await cache.GetStringAsync(cacheKey, token);
+        return !string.IsNullOrEmpty(data);
+    }
+
+    public async Task<T?> GetOrSetAsync<T>(string cacheKey, Func<Task<T?>> factory, CancellationToken token = default, TimeSpan? expiration = null) {
+        var cached = await GetAsync<T>(cacheKey, token);
+        if (cached is not null) return cached;
+
+        await _factory.WaitAsync(token);
+        try {
+            cached = await GetAsync<T>(cacheKey, token);
+            if (cached is not null) return cached;
+
+            var value = await factory();
+            if (value is not null)
+                await SetAsync(cacheKey, value, expiration, token);
+            return value;
+        } finally {
+            _factory.Release();
+        }
+    }
+}
+
+=== ARCHIVO: CacheConfig.cs ===
+
+namespace FunkoApiMongo.Config;
+
+public class CacheConfig {
+    public const string CacheName = "Cache";
+    
+    public int ExpiryMinutes { get; set; } = 30;
+    
+    public int SlidingExpirationMinutes { get; set; } = 10;
+    
+    public TimeSpan DefaultExpiration => TimeSpan.FromMinutes(ExpiryMinutes);
+    public TimeSpan SlidingExpiration => TimeSpan.FromMinutes(SlidingExpirationMinutes);
+}
+
+=== ARCHIVO: CassandraSettings.cs ===
+
+namespace FunkoApiV._2.Config;
+
+public class CassandraSettings {
+    public const string SectionName = "Cassandra";
+    public string[] Hosts { get; set; } = ["localhost"];
+    public int Port { get; set; } = 9043;
+    public string Keyspace { get; set; } = "funkos";
+}
+
+=== ARCHIVO: FunkoConfig.cs ===
+
+namespace FunkoApiV._2.Config;
+
+public static class FunkoConfig {
+    public static IConfiguration Config { get; private set; } = null!;
+
+    public static void Init(IConfiguration configuration) => Config = configuration;
+
+    public static string PostgresConnection =>
+        Config.GetConnectionString("Postgre")
+        ?? throw new InvalidOperationException("Falta ConnectionStrings:Postgre");
+
+    public static string MongoConnection =>
+        Config.GetConnectionString("Mongo")
+        ?? throw new InvalidOperationException("Falta ConnectionStrings:Mongo");
+
+    public static string MongoDatabase =>
+        Config["DatabaseSettings:Name"]
+        ?? throw new InvalidOperationException("Falta DatabaseSettings:Name");
+
+    public static string RedisConnection =>
+        Config.GetConnectionString("Redis")
+        ?? throw new InvalidOperationException("Falta ConnectionStrings:Redis");
+    
+}
+
+=== ARCHIVO: JwtSettings.cs ===
+
+namespace FunkoApiV._2.Config;
+
+public class JwtSettings {
+    public const string Section = "Jwt";
+    public string Key { get; set; } = string.Empty;
+    public string Issuer { get; set; } = string.Empty;
+    public string Audience { get; set; } = string.Empty;
+    public int ExpirationMin { get; set; }
+}
+
+=== ARCHIVO: AuthController.cs ===
+
+using System.Security.Claims;
+using FunkoApiV._2.Dto.Auth;
+using FunkoApiV._2.Error;      
+using FunkoApiV._2.Service;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FunkoApiV._2.Controller.Auth;
+
+/// <summary>
+/// Controller de autenticación: login, signup y perfil.
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController(IAuthService authService) : ControllerBase {
+    /// <summary>
+    /// Inicia sesión con email y contraseña.
+    /// </summary>
+    [HttpPost("login")]
+    public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginDto dto) {
+        var result = await authService.Login(dto);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<AuthResponseDto>();
+    }
+
+    /// <summary>
+    /// Registra un nuevo usuario.
+    /// </summary>
+    [HttpPost("signup")]
+    public async Task<ActionResult<AuthResponseDto>> Signup([FromBody] SignupDto dto) {
+        var result = await authService.Signup(dto);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<AuthResponseDto>();
+    }
+
+    /// <summary>
+    /// Obtiene la información del usuario autenticado.
+    /// </summary>
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<ActionResult<UserDto>> GetMe() {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (!long.TryParse(userIdClaim, out long userId)) {
+            return Unauthorized(new { message = "Token inválido o usuario no identificado" });
+        }
+
+        var result = await authService.GetMe(userId);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<UserDto>();
+    }
+}
+
+=== ARCHIVO: CassandraController.cs ===
+
+using FunkoApiV._2.Dto.Cassandra;
+using FunkoApiV._2.Service.Cassandra;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FunkoApiV._2.Controller.Cassandra;
+
+
+[ApiController]
+[Route("api/cassandra")]
+public class CassandraController(ICassandraService cassandraService) : ControllerBase
+{
+    [HttpGet("categoria/{categoriaId}")]
+    public async Task<ActionResult<IReadOnlyList<FunkosPorCategoriaDto>>> GetFunkosPorCategoria(string categoriaId)
+    {
+        var funkos = await cassandraService.GetFunkosPorCategoria(categoriaId);
+        return Ok(funkos);
+    }
+
+    [HttpGet("proveedor/{proveedorId}")]
+    public async Task<ActionResult<IReadOnlyList<FunkosPorProveedorDto>>> GetFunkosPorProveedor(string proveedorId)
+    {
+        var funkos = await cassandraService.GetFunkosPorProveedor(proveedorId);
+        return Ok(funkos);
+    }
+
+    [HttpGet("proveedor/{proveedorId}/categoria/{categoriaId}")]
+    public async Task<ActionResult<IReadOnlyList<FunkoPorProveedorCategoriaDto>>> GetFunkosPorProveedorCategoria(string proveedorId, string categoriaId)
+    {
+        var funkos = await cassandraService.GetFunkosPorProveedorCategoria(proveedorId, categoriaId);
+        return Ok(funkos);
+    }
+}
+
+=== ARCHIVO: CategoriaController.cs ===
+
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Service;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FunkoApiV._2.Controller;
+
+[ApiController]
+[Route("api/categorias")]
+public class CategoriaController(ICategoriaService ser) : ControllerBase {
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<CategoriaDto>>> GetAll([FromQuery] CategoriaFilterRequest filter) =>
+        Ok(await ser.GetAll(filter));
+    [HttpGet("{id:length(11)}")]
+    public async Task<ActionResult<CategoriaDto>> GetById(string id) {
+        var result = await ser.GetById(id);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<CategoriaDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpPost]
+    public async Task<ActionResult<CategoriaDto>> Create([FromBody] CategoriaRequestDto categoria) {
+        var result = await ser.Add(categoria);
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
+            : result.Error.TopHttpResult<CategoriaDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpPut("{id:length(11)}")]
+    public async Task<ActionResult<CategoriaDto>> Update(string id, [FromBody] CategoriaRequestDto categoria) {
+        var result = await ser.Update(id, categoria);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<CategoriaDto>();
+    }
+
+    [Authorize(Roles = "ADMIN")]
+    [HttpDelete("{id:length(11)}")]
+    public async Task<ActionResult<bool>> Delete(string id) {
+        var result = await ser.Delete(id);
+        return result.IsSuccess
+            ? NoContent()
+            : result.Error.TopHttpResult<bool>();
+    }
+}
+
+=== ARCHIVO: FunkoController.cs ===
+
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Service;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FunkoApiV._2.Controller;
+
+[ApiController]
+[Route("api/funkos")]
+public class FunkoController(IFunkoService ser) : ControllerBase {
+
+    [HttpGet]
+    public async Task<ActionResult<PagedResult<FunkoResponseDto>>> GetAll([FromQuery] FunkoFilterRequest filter) =>
+        Ok(await ser.GetAll(filter));
+    [Authorize(Roles = "ADMIN")]
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<FunkoResponseDto>> GetById(int id) {
+        var resultado = await ser.GetById(id);
+        return resultado.IsSuccess
+            ? Ok(resultado.Value)
+            : resultado.Error.TopHttpResult<FunkoResponseDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpPost]
+    public async Task<ActionResult<FunkoResponseDto>> Create([FromBody] FunkoCreateRequest funko) {
+        var result = await ser.Add(funko);
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
+            : result.Error.TopHttpResult<FunkoResponseDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult<FunkoResponseDto>> Update(int id, [FromBody] FunkoUpdateRequest funko) {
+        var result = await ser.Update(id, funko);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<FunkoResponseDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult<bool>> Delete(int id) {
+        var result = await ser.Delete(id);
+        return result.IsSuccess
+            ? NoContent()
+            : result.Error.TopHttpResult<bool>();
+    }
+    [HttpPost("imagen")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<ImagenResponseDto>> UploadImagen([FromForm] IFormFile file) {
+        var result = await ser.UploadImagen(file);
+        return result.IsSuccess
+            ? Ok(new ImagenResponseDto(result.Value))
+            : result.Error.TopHttpResult<ImagenResponseDto>();
+    }
+
+    [HttpPatch("{id:int}/imagen")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<FunkoResponseDto>> UpdateImagen(int id, [FromForm] IFormFile file) {
+        var result = await ser.UpdateImagen(id, file);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.TopHttpResult<FunkoResponseDto>();
+    }
+}
+
+=== ARCHIVO: ProveedorController.cs ===
+
+using FunkoApiV._2.Dto.Proveedor;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Service;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace FunkoApiV._2.Controller;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ProveedorController(IProveedorService ser) : ControllerBase {
+    [Authorize(Roles = "ADMIN")]
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<ProveedorResponseDto>>> GetAll() {
+        var funkos = await ser.GetAll();
+        return Ok(funkos.ToList());
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ProveedorResponseDto>> GetById(string id) {
+        var resultado = await ser.GetById(id);
+        return resultado.IsSuccess
+            ? Ok(resultado.Value)
+            : resultado.Error.TopHttpResult<ProveedorResponseDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpGet("deleted")]
+    public async Task<ActionResult<ProveedorResponseDto>> GetDeleted() {
+        var get = await ser.GetDeleted();
+        return Ok(get.ToList());
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpPost]
+    public async Task<ActionResult<ProveedorResponseDto>> Create([FromBody] ProveedorRequestDto proveedor) {
+        var result = await ser.Add(proveedor);
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
+            : result.Error.TopHttpResult<ProveedorResponseDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpPut("{id}")]
+    public async Task<ActionResult<ProveedorResponseDto>> Update([FromBody] ProveedorRequestDto proveedor, string id) {
+        var act = await ser.Update(id, proveedor);
+        return act.IsSuccess
+            ? Ok(act.Value)
+            : act.Error.TopHttpResult<ProveedorResponseDto>();
+    }
+    [Authorize(Roles = "ADMIN")]
+    [HttpDelete("{id}")]
+    public async Task<ActionResult<bool>> Delete(string id) {
+        var result = await ser.SoftDelete(id);
+        return result.IsSuccess
+            ? NoContent()
+            : result.Error.TopHttpResult<bool>();
+    }
+}
+
+=== ARCHIVO: ObjectIdJsonConverter.cs ===
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using MongoDB.Bson;
+
+namespace FunkoApiV._2.Converters;
+
+public class ObjectIdJsonConverter : JsonConverter<ObjectId> {
+    
+    public override ObjectId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+        var value = reader.GetString();
+        return string.IsNullOrEmpty(value) ? ObjectId.Empty : new ObjectId(value);
+    }
+
+    public override void Write(Utf8JsonWriter writer, ObjectId value, JsonSerializerOptions options) {
+        writer.WriteStringValue(value.ToString());
+    }
+}
+
+=== ARCHIVO: AuthDto.cs ===
+
+namespace FunkoApiV._2.Dto.Auth;
+
+public record LoginDto(string Email, string Password);
+public record SignupDto(string Email, string Password, string Nombre, string Apellido);
+public record AuthResponseDto(string Token, string Email, string Role, DateTime ExpiresAt);
+public record UserDto(long id, string Email, string Nombre, string Apellidos, string Role);
+
+=== ARCHIVO: FunkoPorProveedorCategoriaDto.cs ===
+
+namespace FunkoApiV._2.Dto.Cassandra;
+
+public record FunkoPorProveedorCategoriaDto
+{
+    public string ProveedorId { get; init; } = string.Empty;
+    public string CategoriaId { get; init; } = string.Empty;
+    public int FunkoId { get; init; }
+    public string Nombre { get; init; } = string.Empty;
+    public string ProveedorNombre { get; init; } = string.Empty;
+    public string CategoriaNombre { get; init; } = string.Empty;
+}
+
+=== ARCHIVO: FunkosPorCategoriaDto.cs ===
+
+namespace FunkoApiV._2.Dto.Cassandra;
+
+public record FunkosPorCategoriaDto {
+    public string CategoriaId { get; init; } = string.Empty;
+    public int FunkoId { get; init; }
+    public string Nombre { get; init; } = string.Empty;
+    public int Stock { get; init; }
+    public decimal Precio { get; init; }
+    public string CategoriaNombre { get; init; } = string.Empty;
+}
+
+=== ARCHIVO: FunkosPorProveedorDto.cs ===
+
+namespace FunkoApiV._2.Dto.Cassandra;
+
+public record FunkosPorProveedorDto
+{
+    public string ProveedorId { get; init; } = string.Empty;
+    public int FunkoId { get; init; }
+    public string Nombre { get; init; } = string.Empty;
+    public int Stock { get; init; }
+    public decimal Precio { get; init; }
+    public string ProveedorNombre { get; init; } = string.Empty;
+}
+
+=== ARCHIVO: CategoriaDto.cs ===
+
+using System.ComponentModel.DataAnnotations;
+
+namespace FunkoApiV._2.Dto;
+
+public record CategoriaDto(
+    string Id,
+    string Nombre,
+    string? Descripcion,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt
+);
+
+public record CategoriaRequestDto {
+    [Required(ErrorMessage = "El nombre es obligatorio")]
+    [MinLength(3, ErrorMessage = "El nombre debe tener 3 caracteres al menos")]
+    [MaxLength(100, ErrorMessage = "El nombre no puede superar los 100 caracteres")]
+    public string Nombre { get; init; } = string.Empty;
+
+    [MaxLength(500, ErrorMessage = "La descripción no puede superar los 500 caracteres")]
+    public string? Descripcion { get; init; }
+}
+
+public record CategoriaFilterRequest {
+    public string? Nombre { get; init; }
+
+    [Range(0, int.MaxValue, ErrorMessage = "La página no puede ser negativa")]
+    public int Page { get; init; } = 0;
+
+    [Range(1, 100, ErrorMessage = "El tamaño de página debe estar entre 1 y 100")]
+    public int Size { get; init; } = 10;
+
+    public string SortBy { get; init; } = "id";
+    public string Direction { get; init; } = "asc";
+    public bool IncludeDeleted { get; init; } = false;
+}
+
+=== ARCHIVO: PagedResult.cs ===
+
+namespace FunkoApiV._2.Dto.Common;
+
+/// <summary>
+/// Envoltorio comÃºn para todas las respuestas paginadas de la API.
+/// La pÃ¡gina inicial es 0, igual que en los filtros del profesor.
+/// </summary>
+public record PagedResult<T> {
+    public IReadOnlyList<T> Items { get; init; } = [];
+    public int TotalCount { get; init; }
+    public int Page { get; init; }
+    public int PageSize { get; init; }
+
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
+    public bool HasNextPage => Page + 1 < TotalPages;
+    public bool HasPreviousPage => Page > 0;
+}
+
+=== ARCHIVO: FunkoCreateRequest.cs ===
+
+using System.ComponentModel.DataAnnotations;
+
+namespace FunkoApiV._2.Dto;
+
+public record FunkoCreateRequest {
+    [Required(ErrorMessage = "El nombre es obligatorio")]
+    [MaxLength(20, ErrorMessage = "El nombre solo puede tener 20 caracteres")]
+    [MinLength(2, ErrorMessage = "El nombre debe tener 2 caracteres al menos")]
+    public string Name { get; init; } = string.Empty;
+
+    [Range(typeof(decimal), "0.01", "50.0", ErrorMessage = "El precio debe estar entre 0.01 y 50.0")]
+    public decimal Precio { get; init; }
+
+    [Required(ErrorMessage = "El ID de la categoría es obligatorio")]
+    [StringLength(11, MinimumLength = 11, ErrorMessage = "El ID de la categoría debe tener 11 caracteres")]
+    public string CategoriaId { get; init; } = string.Empty;
+
+    [Required(ErrorMessage = "El ID del proveedor es obligatorio")]
+    [RegularExpression("^[a-fA-F0-9]{24}$", ErrorMessage = "El ID del proveedor debe ser un ObjectId de 24 caracteres hexadecimales")]
+    public string ProveedorId { get; init; } = string.Empty;
+
+    [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
+    public int Stock { get; init; }
+
+    [Required(ErrorMessage = "La imagen es obligatoria")]
+    [MaxLength(255, ErrorMessage = "La ruta de la imagen no puede superar los 255 caracteres")]
+    public string Imagen { get; init; } = string.Empty;
+}
+
+=== ARCHIVO: FunkoFilterRequest.cs ===
+
+using System.ComponentModel.DataAnnotations;
+
+namespace FunkoApiV._2.Dto;
+
+/// <summary>
+/// Filtros y paginaciÃ³n del listado de funkos.
+/// </summary>
+public record FunkoFilterRequest {
+    public string? Nombre { get; init; }
+    public string? CategoriaId { get; init; }
+    public string? ProveedorId { get; init; }
+    public decimal? PrecioMin { get; init; }
+    public decimal? PrecioMax { get; init; }
+    public int? StockMin { get; init; }
+
+    [Range(0, int.MaxValue, ErrorMessage = "La pÃ¡gina no puede ser negativa")]
+    public int Page { get; init; } = 0;
+
+    [Range(1, 100, ErrorMessage = "El tamaÃ±o de pÃ¡gina debe estar entre 1 y 100")]
+    public int Size { get; init; } = 10;
+
+    public string SortBy { get; init; } = "id";
+    public string Direction { get; init; } = "asc";
+    public bool IncludeDeleted { get; init; } = false;
+}
+
+=== ARCHIVO: FunkoResponseDto.cs ===
+
+namespace FunkoApiV._2.Dto;
+
+public record FunkoResponseDto {
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public decimal Precio { get; init; }
+    public int Stock { get; init; }
+    public string? Imagen { get; init; }
+    public string Categoria { get; init; } = string.Empty;
+    public string CategoriaId { get; init; } = string.Empty;
+    public string ProveedorId { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
+    public DateTime? UpdatedAt { get; init; }
+}
+
+public record ImagenResponseDto(string Imagen);
+
+=== ARCHIVO: FunkoUpdateRequest.cs ===
+
+using System.ComponentModel.DataAnnotations;
+
+namespace FunkoApiV._2.Dto;
+
+public record FunkoUpdateRequest {
+    [Required(ErrorMessage = "El nombre es obligatorio")]
+    [MaxLength(20, ErrorMessage = "El nombre solo puede tener 20 caracteres")]
+    [MinLength(2, ErrorMessage = "El nombre debe tener 2 caracteres al menos")]
+    public string Name { get; init; } = string.Empty;
+
+    [Range(0.01, 50.0, ErrorMessage = "El precio debe estar entre 0.01 y 50.0")]
+    public decimal Precio { get; init; }
+
+    [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
+    public int Stock { get; init; }
+
+    [MaxLength(500, ErrorMessage = "La URL de la imagen no puede superar 500 caracteres")]
+    public string? Imagen { get; init; }
+
+    [Required(ErrorMessage = "El ID de la categoría es obligatorio")]
+    [StringLength(11, MinimumLength = 11, ErrorMessage = "El ID de la categoría debe tener 11 caracteres")]
+    public string CategoriaId { get; init; } = string.Empty;
+
+    [Required(ErrorMessage = "El ID del proveedor es obligatorio")]
+    [RegularExpression("^[0-9a-fA-F]{24}$", ErrorMessage = "El ID del proveedor debe ser un ObjectId de 24 caracteres hex")]
+    public string ProveedorId { get; init; } = string.Empty;
+}
+
+=== ARCHIVO: ProveedorRequestDto.cs ===
+
+using System.ComponentModel.DataAnnotations;
+
+namespace FunkoApiV._2.Dto.Proveedor;
+
+public class ProveedorRequestDto {
+    [Required(ErrorMessage = "El nombre es obligatorio")]
+    [MaxLength(20, ErrorMessage = "El nombre solo puede tener 20 caracteres")]
+    [MinLength(2, ErrorMessage = "El nombre debe tener 2 caracteres al menos")]
+    public string Nombre { get; init; } = string.Empty;
+    [Required(ErrorMessage = "La direccion es obligatoria")]
+    [MaxLength(200, ErrorMessage = "La direccion solo puede tener 200 caracteres")]
+    [MinLength(2, ErrorMessage = "La direccion debe tener 2 caracteres al menos")]
+    public string Direccion { get; init; } = string.Empty;
+}
+
+=== ARCHIVO: ProveedorResponseDto.cs ===
+
+namespace FunkoApiV._2.Dto.Proveedor;
+
+public record ProveedorResponseDto {
+    public string Id { get; init; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Direccion { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+=== ARCHIVO: AppDbContext.cs ===
+
+using FunkoApiV._2.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+namespace FunkoApiV._2.Entity;
+
+public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser, IdentityRole<long>, long>(options) {
+    public DbSet<Funko> Funkos { get; set; }
+    public DbSet<Categoria> Categorias { get; set; }
+
+    private const string ProveedorSeedId = "672f1a8b3c9d4e5f6a7b8c9d";
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<Funko>(e => {
+            e.ToTable("funko");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.Name)
+                .IsRequired()
+                .HasMaxLength(20);
+            e.Property(x => x.Precio)
+                .IsRequired()
+                .HasPrecision(20, 2);
+            e.Property(x => x.Stock)
+                .IsRequired();
+            e.Property(x => x.Imagen)
+                .HasMaxLength(255);
+            e.Property(x => x.CategoriaId)
+                .IsRequired()
+                .HasMaxLength(11);
+            e.HasOne(f => f.Categoria)
+                .WithMany()
+                .HasForeignKey(f => f.CategoriaId)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.ProveedorId)
+                .IsRequired()
+                .HasMaxLength(24);
+            e.Property(x => x.CreatedAt)
+                .IsRequired();
+            e.Property(x => x.UpdatedAt)
+                .IsRequired(false);
+            e.Property(x => x.IsDeleted)
+                .IsRequired()
+                .HasDefaultValue(false);
+            e.HasQueryFilter(f => !f.IsDeleted);
+        });
+        modelBuilder.Entity<Categoria>(e => {
+            e.ToTable("categoria");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id)
+                .HasMaxLength(11);
+
+            e.Property(x => x.Nombre)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            e.Property(x => x.Descripcion)
+                .HasMaxLength(500);
+
+            e.Property(x => x.IsDeleted)
+                .IsRequired()
+                .HasDefaultValue(false);
+            e.HasQueryFilter(c => !c.IsDeleted);
+            
+        });
+    }
+}
+
+=== ARCHIVO: AppDbContextMongoDb.cs ===
+
+using FunkoApiV._2.Models;
+using Microsoft.EntityFrameworkCore;
+using MongoDB.EntityFrameworkCore.Extensions;
+
+namespace FunkoApiV._2.Entity;
+
+public class AppDbContextMongoDb(DbContextOptions<AppDbContextMongoDb>  options) : DbContext(options) {
+    public DbSet<Proveedor> Proveedor =>  Set<Proveedor>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder) {
+        modelBuilder.Entity<Proveedor>().ToCollection("proveedor"); 
+    }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
+        Database.AutoTransactionBehavior = AutoTransactionBehavior.Never;
+    }
+}
+
+=== ARCHIVO: DomainError.cs ===
+
+namespace FunkoApiV._2.Error;
+
+public abstract record DomainError(string Message) {
+    public override string ToString() => $"{GetType().Name}: {Message}";
+}
+
+=== ARCHIVO: DomainErrorExtensions.cs ===
+
+using Microsoft.AspNetCore.Mvc;
+
+namespace FunkoApiV._2.Error;
+
+public static class DomainErrorExtensions {
+    public static ActionResult<T> TopHttpResult<T>(this DomainError error) => error switch {
+        NotFound => new NotFoundObjectResult(new { message = error.Message }),
+        ValidationError => new BadRequestObjectResult(new { message = error.Message }),
+        Conflict => new ConflictObjectResult(new { message = error.Message }),
+        BusinessRuleError => new UnprocessableEntityObjectResult(new { message = error.Message }),
+        UnauthorizedError => new UnauthorizedObjectResult(new { message = error.Message }),
+        _ => new ObjectResult(new { message = "Error interno del servidor" }) { StatusCode = 500 }
+    };
+}
+
+=== ARCHIVO: DomainErrors.cs ===
+
+namespace FunkoApiV._2.Error;
+
+public sealed record NotFound(string Message) : DomainError(Message) {
+    public static NotFound FromId(string id, string resource = "Recurso") =>
+        new($"{resource} con ID {id} no encontrado");
+}
+
+public sealed record ValidationError(string Message) : DomainError(Message);
+
+public sealed record Conflict(string Message) : DomainError(Message);
+
+public sealed record BusinessRuleError(string Message) : DomainError(Message);
+
+public sealed record InternalError(string Message) : DomainError(Message);
+
+public sealed record UnauthorizedError(string Message) : DomainError(Message);
+
+=== ARCHIVO: StorageError.cs ===
+
+namespace FunkoApiV._2.Error;
+
+public static class StorageError {
+    public static DomainError ArchivoVacio() =>
+        new BusinessRuleError("El archivo está vacío o no se ha proporcionado.");
+
+    public static DomainError ArchivoMuyGrande() =>
+        new BusinessRuleError("El archivo supera el tamaño máximo permitido.");
+
+    public static DomainError ExtensionNoPermitida() =>
+        new BusinessRuleError("La extensión del archivo no está permitida.");
+
+    public static DomainError TipoContenidoNoPermitido() =>
+        new BusinessRuleError("El tipo de contenido no está permitido.");
+
+    public static DomainError NombreArchivoInvalido() =>
+        new BusinessRuleError("El nombre del archivo no es válido.");
+
+    public static DomainError ErrorGuardando() =>
+        new InternalError("Error al guardar el archivo en el servidor.");
+
+    public static DomainError ErrorEliminando() =>
+        new InternalError("Error al eliminar el archivo del servidor.");
+}
+
+=== ARCHIVO: CassandraConfig.cs ===
+
+using Cassandra;
+using FunkoApiV._2.Config;
+using ISession = Cassandra.ISession;
+
+namespace FunkoApiV._2.Infrastructure.Cassandra;
+
+public static class CassandraConfig {
+    public static IServiceCollection AddCassandra(this IServiceCollection services, IConfiguration config) {
+        var settings = config
+            .GetSection(CassandraSettings.SectionName)
+            .Get<CassandraSettings>() ?? new CassandraSettings();
+
+        var cluster = Cluster.Builder()
+            .AddContactPoints(settings.Hosts)
+            .WithPort(settings.Port)
+            .Build();
+
+        ISession session;
+
+        for (var i = 1;  ; i++) {
+            try {
+                session = cluster.Connect();
+                break;
+            } catch (NoHostAvailableException) when(i < 50) {
+                Thread.Sleep(TimeSpan.FromSeconds(3));
+            }
+        }
+
+        services.AddSingleton(settings);
+        services.AddSingleton<ISession>(session);
+        return services;
+    }
+}
+
+=== ARCHIVO: CassandraSchemaExtensions.cs ===
+
+using Cassandra;
+using ISession = Cassandra.ISession;
+
+namespace FunkoApiV._2.Infrastructure.Cassandra;
+
+public static class CassandraSchemaExtensions {
+    public static async Task InitializeSchemaAsync(this ISession session, string keyspace) {
+        for (var i = 1; ; i++) {
+            try {
+                await session.ExecuteAsync(new SimpleStatement("SELECT now() FROM system.local"));
+                break;
+            } catch (NoHostAvailableException) when (i < 50) {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
+        }
+        await session.ExecuteAsync(new SimpleStatement(
+            $"CREATE KEYSPACE IF NOT EXISTS {keyspace}" + 
+            "WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}"
+            ));
+        session.ChangeKeyspace(keyspace);
+
+        await session.ExecuteAsync(new SimpleStatement("""
+                                                        CREATE TABLE IF NOT EXISTS funkos_por_categorias (
+                                                       categoria_id text,
+                                                       funkos_id int,
+                                                       nombre text,
+                                                       stock int,
+                                                       precio decimal,
+                                                       categoria_nombre text,
+                                                       PRIMARY KEY(categoria_id, funkos_id)
+                                                       """));
+        await session.ExecuteAsync(new SimpleStatement("""
+                                                        CREATE TABLE IF NOT EXISTS funkos_por_proveedor (
+                                                       proveedor_id text,
+                                                       funkos_id int,
+                                                       nombre text,
+                                                       stock int,
+                                                       precio decimal,
+                                                       proveedor_nombre text,
+                                                       PRIMARY KEY(proveedor_id, funkos_id)
+                                                       """));
+        await session.ExecuteAsync(new SimpleStatement("""
+                                                       CREATE TABLE IF NOT EXISTS funkos_por_proveedor_categoria(
+                                                           proveedor_id text,
+                                                           categoria_id text,
+                                                           funko_id int,
+                                                           nombre text,
+                                                           proveedor_nombre text,
+                                                           categoria_nombre text,
+                                                           PRIMARY KEY(proveedor_id, categoria_id, funkos_id)
+                                                       )
+                                                       """));
+    }
+}
+        
+
+=== ARCHIVO: IScopedService.cs ===
+
+namespace FunkoApiV._2.Infrastructure.Interfaces;
+
+public interface IScopedService {
+    
+}
+
+=== ARCHIVO: ISingletonService.cs ===
+
+namespace FunkoApiV._2.Infrastructure.Interfaces;
+
+public interface ISingletonService {
+    
+}
+
+=== ARCHIVO: ITransientService.cs ===
+
+namespace FunkoApiV._2.Infrastructure.Interfaces;
+
+public interface ITransientService {
+    
+}
+
+=== ARCHIVO: DependencerProvider.cs ===
+
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Service;
+using FunkoApiV._2.Service.Proveedor;
+
+namespace FunkoApiV._2.Infrastructure;
+
+public static class DependencerProvider {
+    public static IServiceCollection AddDependencies(this IServiceCollection services) {
+        services.Scan(scan => scan
+            .FromAssemblyOf<Program>()
+            .AddClasses(c => c.AssignableTo<ITransientService>())
+            .AsImplementedInterfaces()
+            .WithTransientLifetime()
+            .AddClasses(c => c.AssignableTo<IScopedService>())
+            .AsImplementedInterfaces()
+            .WithScopedLifetime()
+        );
+
+        services.Decorate<IFunkoService, CachedFunkoService>();
+        services.Decorate<ICategoriaService, CachedCategoriaService>();
+        services.Decorate<IProveedorService, CachedProveedorService>();
+
+        return services;
+    }
+}
+
+=== ARCHIVO: IdentityConfig.cs ===
+
+using System.Text;
+using FunkoApiV._2.Config;
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+using Serilog;
+
+namespace FunkoApiV._2.Infrastructure;
+
+public static class IdentityConfig
+{
+    /// <summary>
+    /// Registra Identity, JWT Bearer y políticas de autorización.
+    /// </summary>
+    /// <param name="services">Colección de servicios.</param>
+    /// <param name="configuration">Configuración de la app.</param>
+    /// <returns>IServiceCollection para encadenar.</returns>
+    public static IServiceCollection AddIdentityConfiguration(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        Log.Information("Configurando Identity y JWT...");
+
+        // ── JWT Settings ─────────────────────────────────────────────────────
+        var jwtSection = configuration.GetSection(JwtSettings.Section);
+        services.Configure<JwtSettings>(jwtSection);
+
+        var jwtSettings = jwtSection.Get<JwtSettings>() ?? new JwtSettings();
+
+        if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+            throw new InvalidOperationException("JWT Key no configurada en appsettings.json");
+
+        // ── Identity ─────────────────────────────────────────────────────────
+        // AddIdentityCore: Identity sin UI (no registra la cookie Identity.Application),
+        // el mecanismo oficial para APIs.
+        services.AddIdentityCore<AppUser>(options =>
+        {
+            // Password
+            options.Password.RequiredLength = 8;
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+
+            // Lockout
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            options.Lockout.MaxFailedAccessAttempts = 5;
+
+            // User
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddRoles<IdentityRole<long>>()
+        .AddSignInManager()
+        .AddEntityFrameworkStores<AppDbContext>()  
+        .AddDefaultTokenProviders();
+
+        // ── JWT Authentication ───────────────────────────────────────────────
+        services.AddAuthentication(options =>
+        {
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+
+        // ── Authorization Policies ───────────────────────────────────────────
+        services.AddAuthorizationBuilder()
+            .AddPolicy("RequireAdmin", policy =>
+                policy.RequireRole("ADMIN").Build())
+            .AddPolicy("RequireUser", policy =>
+                policy.RequireRole("USER", "ADMIN").Build());
+
+        Log.Information("Identity y JWT configurados correctamente.");
+        return services;
+    }
+}
+
+=== ARCHIVO: CassandraMapper.cs ===
+
+using FunkoApiV._2.Dto.Cassandra;
+using FunkoApiV._2.Models.Cassandra;
+
+namespace FunkoApiV._2.Mapper.Cassandra;
+
+public static class CassandraMapper {
+    public static FunkosPorProveedorDto ToDto(this FunkosPorProveedor model) => new() {
+            ProveedorId = model.ProveedorId,
+            FunkoId = model.FunkosId,
+            Nombre = model.Nombre,
+            Stock = model.Stock,
+            Precio = model.Precio,
+            ProveedorNombre = model.ProveedorNombre
+        };
+    public static FunkosPorCategoriaDto ToDto(this FunkosPorCategoria model) =>
+        new()
+        {
+            CategoriaId = model.CategoriaId,
+            FunkoId = model.FunkosId,
+            Nombre = model.Nombre,
+            Stock = model.Stock,
+            Precio = model.Precio,
+            CategoriaNombre = model.CategoriaNombre
+        };
+    public static FunkoPorProveedorCategoriaDto ToDto(this FunkoPorProveedorCategoria model) =>
+        new()
+        {
+            ProveedorId = model.ProveedorId,
+            CategoriaId = model.CategoriaId,
+            FunkoId = model.FunkosId,
+            Nombre = model.Nombre,
+            ProveedorNombre = model.ProveedorNombre,
+            CategoriaNombre = model.CategoriaNombre
+        };
+}
+
+=== ARCHIVO: CategoriaMapper.cs ===
+
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Models;
+
+namespace FunkoApiV._2.Mapper;
+
+public static class CategoriaMapper {
+    public static CategoriaDto ToDto(this Categoria c) => new(
+        c.Id,
+        c.Nombre,
+        c.Descripcion,
+        c.CreatedAt,
+        c.UpdatedAt
+    );
+
+    public static Categoria ToModel(this CategoriaRequestDto dto) => new() {
+        Nombre = dto.Nombre,
+        Descripcion = dto.Descripcion,
+        CreatedAt = DateTime.UtcNow,
+        IsDeleted = false
+    };
+}
+
+=== ARCHIVO: FunkoMapper.cs ===
+
+using System;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Models;
+
+namespace FunkoApiV._2.Mapper;
+
+public static class FunkoMapper {
+    public static FunkoResponseDto ToDto(this Funko f) => new() {
+        Id = f.Id,
+        Name = f.Name,
+        Precio = f.Precio,
+        Stock = f.Stock,
+        Imagen = f.Imagen,
+        Categoria = f.Categoria?.Nombre ?? string.Empty,
+        CategoriaId = f.CategoriaId,
+        ProveedorId = f.ProveedorId,
+        CreatedAt = f.CreatedAt,
+        UpdatedAt = f.UpdatedAt
+    };
+
+    public static Funko ToModel(this FunkoCreateRequest dto) => new() {
+        Name = dto.Name,
+        Precio = dto.Precio,
+        Stock = dto.Stock,
+        Imagen =  dto.Imagen,
+        CategoriaId = dto.CategoriaId,
+        ProveedorId =  dto.ProveedorId,
+        CreatedAt = DateTime.UtcNow,
+    };
+
+    public static Funko ToModel(this FunkoUpdateRequest dto) => new() {
+        Name = dto.Name,
+        Precio = dto.Precio,
+        Stock = dto.Stock,
+        Imagen = dto.Imagen,
+        CategoriaId = dto.CategoriaId,
+        ProveedorId = dto.ProveedorId,
+        UpdatedAt = DateTime.UtcNow
+    };
+    
+}
+
+=== ARCHIVO: ProveedorMapper.cs ===
+
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Proveedor;
+using FunkoApiV._2.Models;
+
+namespace FunkoApiV._2.Mapper.Provedor;
+
+public static class ProveedorMapper {
+    public static ProveedorResponseDto ToDto(this Proveedor f) => new() {
+        Id = f.Id.ToString(),
+        Nombre = f.Nombre,
+        Direccion =  f.Direccion,
+        CreatedAt = f.CreatedAt,
+        UpdatedAt = f.UpdatedAt
+    };
+
+    public static Proveedor ToModel(this ProveedorRequestDto dto) => new() {
+        Nombre = dto.Nombre,
+        Direccion =  dto.Direccion,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = null,
+        IsDeleted = false
+    };
+
+}
+
+=== ARCHIVO: FunkoPorProveedorCategoria.cs ===
+
+using Cassandra.Mapping.Attributes;
+
+namespace FunkoApiV._2.Models.Cassandra;
+
+[Table("funkos_por_proveedor_categoria")]
+public class FunkoPorProveedorCategoria {
+    [Column("proveedor_id")]
+    [PartitionKey]
+    public string ProveedorId { get; set; }
+    [Column("categoria_id")]
+    [PartitionKey]
+    public string CategoriaId { get; set; }
+    
+    [Column("funkos_id")]
+    [ClusteringKey]
+    public int FunkosId { get; set; }
+    
+    [Column("nombre")]
+    public string Nombre { get; set; }
+    
+    [Column("proveedor_nombre")]
+    public string ProveedorNombre { get; set; }
+    
+    [Column("categoria_nombre")]
+    public string CategoriaNombre { get; set; }
+}
+
+=== ARCHIVO: FunkosPorCategoria.cs ===
+
+using Cassandra.Mapping.Attributes;
+
+namespace FunkoApiV._2.Models.Cassandra;
+
+[Table("funkos_por_categorias")]
+public class FunkosPorCategoria {
+    [Column("categoria_id")]
+    [PartitionKey]
+    public string CategoriaId { get; set; }
+    
+    [Column("funkos_id")]
+    [ClusteringKey]
+    public int FunkosId { get; set; }
+    
+    [Column("nombre")]
+    public string Nombre { get; set; }
+    [Column("precio")]
+    public decimal Precio { get; set; }
+    
+    [Column("stock")]
+    public int Stock { get; set; }
+    
+    [Column("categoria_nombre")]
+    public string CategoriaNombre { get; set; }
+}
+
+=== ARCHIVO: FunkosPorProveedor.cs ===
+
+using Cassandra.Mapping.Attributes;
+
+namespace FunkoApiV._2.Models.Cassandra;
+
+[Table("funkos_por_proveedor")]
+public class FunkosPorProveedor {
+    [Column("proveedor_id")]
+    [PartitionKey]
+    public string ProveedorId { get; set; }
+    
+    [Column("funkos_id")]
+    [ClusteringKey]
+    public int FunkosId { get; set; }
+    
+    [Column("nombre")]
+    public string Nombre { get; set; }
+    
+    [Column("stock")]
+    public int Stock { get; set; }
+    [Column("precio")]
+    public decimal Precio { get; set; }
+    
+    [Column("proveedor_nombre")]
+    public string ProveedorNombre { get; set; }
+}
+
+=== ARCHIVO: AppUser.cs ===
+
+using Microsoft.AspNetCore.Identity;
+
+namespace FunkoApiV._2.Models;
+
+public class AppUser : IdentityUser<long> {
+    public string Nombre  { get; set; } = string.Empty;
+    public string Apellido { get; set; } = string.Empty;
+    public DateTime Createdt { get; set; } = DateTime.UtcNow;
+}
+
+=== ARCHIVO: Categoria.cs ===
+
+namespace FunkoApiV._2.Models;
+
+public record Categoria {
+    [YoutubeId] 
+    public string Id { get; set; } = null!;
+    public string Nombre { get; set; } = string.Empty;
+    public string? Descripcion { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; }
+}
+
+=== ARCHIVO: Funko.cs ===
+
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace FunkoApiV._2.Models;
+
+public record Funko {
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public decimal Precio { get; set; }
+    public int Stock { get; set; }
+    public string? Imagen { get; set; }
+
+    public string CategoriaId { get; set; } = string.Empty;
+    public Categoria Categoria { get; set; } = null!;
+
+    public string ProveedorId { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public bool IsDeleted { get; set; }
+}
+
+=== ARCHIVO: Proveedor.cs ===
+
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace FunkoApiV._2.Models;
+public record Proveedor {
+    [BsonId] public ObjectId Id { get; init; } = ObjectId.GenerateNewId();
+    [BsonElement("nombre")] 
+    public string Nombre { get; set; } = string.Empty;
+    [BsonElement("direccion")]
+    public string Direccion { get; set; } = string.Empty;
+    [BsonElement("created_at")]
+    public DateTime CreatedAt { get; set; }
+    [BsonElement("updated_at")]
+    public DateTime? UpdatedAt { get; set; }
+    [BsonElement("id_deleted")]
+    public bool IsDeleted { get; set; }
+}
+
+=== ARCHIVO: launchSettings.json ===
+
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5197",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:7259;http://localhost:5197",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+
+=== ARCHIVO: CassandraRepository.cs ===
+
+using Cassandra.Data.Linq;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Models.Cassandra;
+using ISession = Cassandra.ISession;
+
+namespace FunkoApiV._2.Repository.Cassandra;
+
+public class CassandraRepository(ISession session): ICassandraRepository, IScopedService {
+    private readonly Table<FunkosPorCategoria> _funkosPorCategori = new(session);
+    private readonly Table<FunkosPorProveedor> _funkosPorProveedor = new(session);
+    private readonly Table<FunkoPorProveedorCategoria> _funkosPorProveedorCategoria = new(session);
+     
+    public async Task<IReadOnlyList<FunkosPorCategoria>> GetFunkosPorCategoria(string categoriaId) {
+        var funkos = await _funkosPorCategori
+            .Where(f => f.CategoriaId == categoriaId)
+            .ExecuteAsync();
+        return funkos.ToList();
+    }
+
+    public async Task<IReadOnlyList<FunkosPorProveedor>> GetFunkosPorProveedor(string proveedorId) {
+        var funkos = await  _funkosPorProveedor
+            .Where(f => f.ProveedorId == proveedorId)
+            .ExecuteAsync();
+        return funkos.ToList();
+    }
+
+    public async Task<IReadOnlyList<FunkoPorProveedorCategoria>> GetFunkosPorProveedorCategoria(string proveedorId, string categoriaId) {
+        var funkos = await _funkosPorProveedorCategoria
+            .Where(f => f.CategoriaId == categoriaId && f.ProveedorId == proveedorId)
+            .ExecuteAsync();
+        return funkos.ToList();
+    }
+}
+
+=== ARCHIVO: ICassandraRepository.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Models.Cassandra;
+
+namespace FunkoApiV._2.Repository.Cassandra;
+
+public interface ICassandraRepository {
+    Task<IReadOnlyList<FunkosPorCategoria>> GetFunkosPorCategoria(string categoriaId);
+    Task<IReadOnlyList<FunkosPorProveedor>> GetFunkosPorProveedor(string proveedorId);
+    Task<IReadOnlyList<FunkoPorProveedorCategoria>> GetFunkosPorProveedorCategoria(string proveedorId, string categoriaId);
+}
+
+=== ARCHIVO: CategoriaRepository.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace FunkoApiV._2.Repository;
+
+public class  CategoriaRepository(AppDbContext context) : ICategoriaRepository, IScopedService {
+    public async Task<(IReadOnlyList<Categoria> Items, int Total)> GetPagedAsync(CategoriaFilterRequest filter) {
+        IQueryable<Categoria> query = context.Categorias.AsNoTracking();
+
+        if (filter.IncludeDeleted)
+            query = query.IgnoreQueryFilters();
+
+        if (!string.IsNullOrWhiteSpace(filter.Nombre))
+            query = query.Where(c => EF.Functions.ILike(c.Nombre, $"%{filter.Nombre}%"));
+
+        var total = await query.CountAsync();
+        var items = await ApplySort(query, filter.SortBy, filter.Direction)
+            .Skip(filter.Page * filter.Size)
+            .Take(filter.Size)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<Result<Categoria, DomainError>> GetById(string id) {
+        var categoria = await context.Categorias
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        return categoria is not null
+            ? Result.Success<Categoria, DomainError>(categoria)
+            : Result.Failure<Categoria, DomainError>(NotFound.FromId(id, "Categoria"));
+    }
+
+    public async Task<Result<Categoria, DomainError>> CreateAsync(Categoria categoria) {
+        var nueva = categoria with {
+            Id = YouTubeIdValueGenerator.GenerateId(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = null,
+            IsDeleted = false
+        };
+        await context.Categorias.AddAsync(nueva);
+        await context.SaveChangesAsync();
+        return Result.Success<Categoria, DomainError>(nueva);
+    }
+
+    public async Task<Result<Categoria, DomainError>> UpdateAsync(string id, Categoria categoria) {
+        var existente = await context.Categorias
+            .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        if (existente is null)
+            return Result.Failure<Categoria, DomainError>(NotFound.FromId(id, "Categoria"));
+
+        existente.Nombre = categoria.Nombre;
+        existente.Descripcion = categoria.Descripcion;
+        existente.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        return Result.Success<Categoria, DomainError>(existente);
+    }
+
+    public async Task<Result<bool, DomainError>> DeleteAsync(string id) {
+        var categoria = await context.Categorias
+            .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        if (categoria is null)
+            return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Categoria"));
+
+        categoria.IsDeleted = true;
+        categoria.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        return Result.Success<bool, DomainError>(true);
+    }
+
+    private static IQueryable<Categoria> ApplySort(IQueryable<Categoria> query, string sortBy, string direction) {
+        var desc = direction.Equals("desc", StringComparison.OrdinalIgnoreCase);
+        return sortBy.ToLowerInvariant() switch {
+            "nombre" or "name" => desc ? query.OrderByDescending(c => c.Nombre) : query.OrderBy(c => c.Nombre),
+            "createdat" or "created_at" => desc ? query.OrderByDescending(c => c.CreatedAt) : query.OrderBy(c => c.CreatedAt),
+            _ => desc ? query.OrderByDescending(c => c.Id) : query.OrderBy(c => c.Id)
+        };
+    }
+}
+
+=== ARCHIVO: ICategoriaRepository.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Models;
+
+namespace FunkoApiV._2.Repository;
+
+public interface ICategoriaRepository {
+    Task<(IReadOnlyList<Categoria> Items, int Total)> GetPagedAsync(CategoriaFilterRequest filter);
+
+    Task<Result<Categoria, DomainError>> GetById(string id);
+
+    Task<Result<Categoria, DomainError>> CreateAsync(Categoria categoria);
+
+    Task<Result<Categoria, DomainError>> UpdateAsync(string id, Categoria categoria);
+
+    Task<Result<bool, DomainError>> DeleteAsync(string id);
+}
+
+=== ARCHIVO: FunkoRepository.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace FunkoApiV._2.Repository;
+
+public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedService {
+    public async Task<(IReadOnlyList<Funko> Items, int Total)> GetPagedAsync(FunkoFilterRequest filter) {
+        IQueryable<Funko> query = context.Funkos.AsNoTracking();
+
+        if (filter.IncludeDeleted)
+            query = query.IgnoreQueryFilters();
+
+        query = query.Include(f => f.Categoria);
+
+        if (!string.IsNullOrWhiteSpace(filter.Nombre))
+            query = query.Where(f => EF.Functions.ILike(f.Name, $"%{filter.Nombre}%"));
+
+        if (!string.IsNullOrWhiteSpace(filter.CategoriaId))
+            query = query.Where(f => f.CategoriaId == filter.CategoriaId);
+
+        if (!string.IsNullOrWhiteSpace(filter.ProveedorId))
+            query = query.Where(f => f.ProveedorId == filter.ProveedorId);
+
+        if (filter.PrecioMin.HasValue)
+            query = query.Where(f => f.Precio >= filter.PrecioMin.Value);
+
+        if (filter.PrecioMax.HasValue)
+            query = query.Where(f => f.Precio <= filter.PrecioMax.Value);
+
+        if (filter.StockMin.HasValue)
+            query = query.Where(f => f.Stock >= filter.StockMin.Value);
+
+        var total = await query.CountAsync();
+        var items = await ApplySort(query, filter.SortBy, filter.Direction)
+            .Skip(filter.Page * filter.Size)
+            .Take(filter.Size)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<Result<Funko, DomainError>> GetByIdAsync(int id) {
+        var funko = await context.Funkos
+            .AsNoTracking()
+            .Include(f => f.Categoria)
+            .FirstOrDefaultAsync(f => f.Id == id);
+        return funko is not null
+            ? Result.Success<Funko, DomainError>(funko)
+            : Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
+    }
+
+    public async Task<Result<Funko, DomainError>> CreateAsync(Funko funko) {
+        var nuevo = funko with {
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = null,
+            IsDeleted = false
+        };
+        await context.Funkos.AddAsync(nuevo);
+        await context.SaveChangesAsync();
+        await context.Entry(nuevo).Reference(f => f.Categoria).LoadAsync();
+        return Result.Success<Funko, DomainError>(nuevo);
+    }
+
+    public async Task<Result<Funko, DomainError>> UpdateAsync(int id, Funko funko) {
+        var existente = await context.Funkos.FirstOrDefaultAsync(f => f.Id == id);
+        if (existente is null)
+            return Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
+
+        existente.Name = funko.Name;
+        existente.Precio = funko.Precio;
+        existente.Stock = funko.Stock;
+        existente.Imagen = funko.Imagen;
+        existente.CategoriaId = funko.CategoriaId;
+        existente.ProveedorId = funko.ProveedorId;
+        existente.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        await context.Entry(existente).Reference(f => f.Categoria).LoadAsync();
+        return Result.Success<Funko, DomainError>(existente);
+    }
+
+    public async Task<Result<Funko, DomainError>> SetImagenAsync(int id, string imagen) {
+        var existente = await context.Funkos.FirstOrDefaultAsync(f => f.Id == id);
+        if (existente is null)
+            return Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
+
+        existente.Imagen = imagen;
+        existente.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        await context.Entry(existente).Reference(f => f.Categoria).LoadAsync();
+        return Result.Success<Funko, DomainError>(existente);
+    }
+
+    public async Task<Result<bool, DomainError>> DeleteAsync(int id) {
+        var funko = await context.Funkos.FirstOrDefaultAsync(f => f.Id == id);
+        if (funko is null)
+            return Result.Failure<bool, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
+
+        funko.IsDeleted = true;
+        funko.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        return Result.Success<bool, DomainError>(true);
+    }
+
+    private static IQueryable<Funko> ApplySort(IQueryable<Funko> query, string sortBy, string direction) {
+        var desc = direction.Equals("desc", StringComparison.OrdinalIgnoreCase);
+        return sortBy.ToLowerInvariant() switch {
+            "name" or "nombre" => desc ? query.OrderByDescending(f => f.Name) : query.OrderBy(f => f.Name),
+            "precio" or "price" => desc ? query.OrderByDescending(f => f.Precio) : query.OrderBy(f => f.Precio),
+            "stock" => desc ? query.OrderByDescending(f => f.Stock) : query.OrderBy(f => f.Stock),
+            "createdat" or "created_at" => desc ? query.OrderByDescending(f => f.CreatedAt) : query.OrderBy(f => f.CreatedAt),
+            _ => desc ? query.OrderByDescending(f => f.Id) : query.OrderBy(f => f.Id)
+        };
+    }
+}
+
+=== ARCHIVO: IFunkoRepository.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Models;
+
+namespace FunkoApiV._2.Repository;
+
+public interface IFunkoRepository {
+    Task<(IReadOnlyList<Funko> Items, int Total)> GetPagedAsync(FunkoFilterRequest filter);
+
+    Task<Result<Funko, DomainError>> GetByIdAsync(int id);
+
+    Task<Result<Funko, DomainError>> CreateAsync(Funko funko);
+
+    Task<Result<Funko, DomainError>> UpdateAsync(int id, Funko funko);
+
+    Task<Result<Funko, DomainError>> SetImagenAsync(int id, string imagen);
+
+    Task<Result<bool, DomainError>> DeleteAsync(int id);
+}
+
+=== ARCHIVO: IProveedorRepository.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Models;
+
+namespace FunkoApiV._2.Repository;
+
+public interface IProveedorRepository {
+    Task<IReadOnlyList<Proveedor>> GetAll();
+
+    Task<Result<Proveedor, DomainError>> GetById(string id);
+
+    Task<IReadOnlyList<Proveedor>> GetAllDeleted();
+    
+    Task<Result<Proveedor, DomainError>> Add(Proveedor proveedor);
+
+    Task<Result<Proveedor, DomainError>> Update(string id, Proveedor proveedor);
+    
+    Task<Result<bool, DomainError>> SoftDelete(string id);
+    
+}
+
+=== ARCHIVO: ProveedorRepository.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Models;
+using Microsoft.EntityFrameworkCore;
+namespace FunkoApiV._2.Repository;
+
+public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorRepository> log) : IProveedorRepository, IScopedService {
+    public async Task<IReadOnlyList<Proveedor>> GetAll() {
+        log.LogDebug("Obteniendo todos los proveedores.");
+        return await context.Proveedor.Where(p => !p.IsDeleted).ToListAsync();
+    }
+
+    public async Task<Result<Proveedor, DomainError>> GetById(string id) {
+        log.LogDebug("Obteniendo proveedor con id: {Id} ", id);
+        var funko = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && !p.IsDeleted);
+        return funko is not null 
+            ? Result.Success<Proveedor, DomainError>(funko)
+            : Result.Failure<Proveedor, DomainError>(NotFound.FromId(id, "Proveedor"));
+    }
+
+    public async Task<IReadOnlyList<Proveedor>> GetAllDeleted() {
+        log.LogDebug("Obteniendo todos los proveedores eliminados");
+        return await context.Proveedor.Where(p => p.IsDeleted == true).ToListAsync();
+    }
+
+    public async Task<Result<Proveedor, DomainError>> Add(Proveedor proveedor) {
+        log.LogDebug("Obteniendo proveedor con id: {proveedor} ", proveedor);
+        var nuevo = proveedor with {
+            CreatedAt = DateTime.UtcNow,
+            IsDeleted = false
+        };
+        await context.Proveedor.AddAsync(nuevo);
+        await context.SaveChangesAsync();
+        log.LogDebug("Proveedor guardado exitosamente");
+        return Result.Success<Proveedor, DomainError>(nuevo);
+    }
+
+    public async Task<Result<Proveedor, DomainError>> Update(string id, Proveedor proveedor) {
+        log.LogDebug("Actualizando proveedor con id: {id} ", id);
+        
+        var existente = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && !p.IsDeleted);
+        if (existente is null) 
+            return Result.Failure<Proveedor, DomainError>(NotFound.FromId(id, "Proveedor"));
+        existente.Nombre = proveedor.Nombre;
+        existente.Direccion = proveedor.Direccion;
+        existente.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        log.LogDebug("Proveedor actualizado exitosamente");
+        return Result.Success<Proveedor, DomainError>(existente);
+    }
+
+    public async Task<Result<bool, DomainError>> SoftDelete(string id) {
+        log.LogDebug("Eliminando proveedor con id: {id} ", id);
+        var proveedor = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && !p.IsDeleted);
+        if (proveedor is null)
+            return Result.Failure<bool, DomainError>(NotFound.FromId(id, "Proveedor"));
+        proveedor.IsDeleted = true;
+        proveedor.UpdatedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync();
+        log.LogDebug("Proveedor eliminado exitosamente");
+        return Result.Success<bool, DomainError>(true);
+    }
+
+}
+
+=== ARCHIVO: DbSeeder.cs ===
+
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using MongoDB.Bson;
+
+namespace FunkoApiV._2.Seeders;
+
+/// <summary>
+/// Seeder explÃ­cito e idempotente para datos iniciales.
+/// Respeta las relaciones: Proveedor 1 â†’ * Funkos * â†’ 1 CategorÃ­a.
+/// </summary>
+public static class DbSeeder {
+    private const string ProveedorSeedId = "672f1a8b3c9d4e5f6a7b8c9d";
+
+    public static async Task SeedAsync(AppDbContext db, AppDbContextMongoDb dbMongo, ILogger logger) {
+        // â”€â”€ 1. Roles de Identity (PostgreSQL) â”€â”€
+        if (!await db.Roles.AnyAsync()) {
+            db.Roles.AddRange(
+                new Microsoft.AspNetCore.Identity.IdentityRole<long> { Name = "USER", NormalizedName = "USER" },
+                new Microsoft.AspNetCore.Identity.IdentityRole<long> { Name = "ADMIN", NormalizedName = "ADMIN" }
+            );
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seed de roles aplicado");
+        }
+
+        // â”€â”€ 2. CategorÃ­as (PostgreSQL) â”€â”€
+        if (!await db.Categorias.AnyAsync()) {
+            var seedDate = DateTime.UtcNow;
+            db.Categorias.AddRange(
+                new Categoria { Id = "Anime000001", Nombre = "Anime", Descripcion = "Personajes de series de anime y manga", CreatedAt = seedDate, IsDeleted = false },
+                new Categoria { Id = "Videojuego1", Nombre = "Videojuegos", Descripcion = "Personajes de consolas y PC", CreatedAt = seedDate, IsDeleted = false },
+                new Categoria { Id = "Peliculas01", Nombre = "PelÃ­culas", Descripcion = "Cine y series de televisiÃ³n", CreatedAt = seedDate, IsDeleted = false }
+            );
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seed de categorÃ­as aplicado");
+        }
+
+        // â”€â”€ 3. Proveedores (MongoDB) â”€â”€
+        // El ObjectId debe ser vÃ¡lido (24 hex) para que coincida con ProveedorId en Funkos.
+        var proveedorObjectId = ObjectId.Parse(ProveedorSeedId);
+        if (!await dbMongo.Proveedor.AnyAsync()) {
+            var seedDate = DateTime.UtcNow;
+            dbMongo.Proveedor.AddRange(
+                new Proveedor {
+                    Id = proveedorObjectId,
+                    Nombre = "Proveedor Semilla",
+                    Direccion = "DirecciÃ³n semilla",
+                    CreatedAt = seedDate,
+                    IsDeleted = false
+                }
+            );
+            await dbMongo.SaveChangesAsync();
+            logger.LogInformation("Seed de proveedores (MongoDB) aplicado");
+        }
+
+        // â”€â”€ 4. Funkos (PostgreSQL) â”€â”€
+        // Solo se insertan si no hay funkos, y siempre referenciando
+        // categorÃ­as y proveedores que ya existen (pasos 2 y 3).
+        if (!await db.Funkos.AnyAsync()) {
+            var seedDate = DateTime.UtcNow;
+            db.Funkos.AddRange(
+                new Funko {
+                    Name = "Kirito",
+                    Precio = 15.99m,
+                    Stock = 10,
+                    Imagen = "/uploads/funkos/placeholder.png",
+                    CategoriaId = "Anime000001",
+                    ProveedorId = ProveedorSeedId,
+                    CreatedAt = seedDate,
+                    IsDeleted = false
+                },
+                new Funko {
+                    Name = "Hinata Shoyo",
+                    Precio = 14.50m,
+                    Stock = 8,
+                    Imagen = "/uploads/funkos/placeholder.png",
+                    CategoriaId = "Anime000001",
+                    ProveedorId = ProveedorSeedId,
+                    CreatedAt = seedDate,
+                    IsDeleted = false
+                },
+                new Funko {
+                    Name = "Master Chief",
+                    Precio = 19.99m,
+                    Stock = 5,
+                    Imagen = "/uploads/funkos/placeholder.png",
+                    CategoriaId = "Videojuego1",
+                    ProveedorId = ProveedorSeedId,
+                    CreatedAt = seedDate,
+                    IsDeleted = false
+                },
+                new Funko {
+                    Name = "Geralt de Rivia",
+                    Precio = 17.50m,
+                    Stock = 12,
+                    Imagen = "/uploads/funkos/placeholder.png",
+                    CategoriaId = "Videojuego1",
+                    ProveedorId = ProveedorSeedId,
+                    CreatedAt = seedDate,
+                    IsDeleted = false
+                },
+                new Funko {
+                    Name = "Darth Vader",
+                    Precio = 21.00m,
+                    Stock = 3,
+                    Imagen = "/uploads/funkos/placeholder.png",
+                    CategoriaId = "Peliculas01",
+                    ProveedorId = ProveedorSeedId,
+                    CreatedAt = seedDate,
+                    IsDeleted = false
+                }
+            );
+            await db.SaveChangesAsync();
+            logger.LogInformation("Seed de funkos aplicado");
+        }
+    }
+}
+
+=== ARCHIVO: IdentitySeeder.cs ===
+
+using DnsClient.Internal;
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
+
+namespace FunkoApiV._2.Seeders;
+
+public static class IdentitySeeder {
+    public static async Task SeedAsync(IServiceProvider scopeServices, ILogger logger) {
+        var roleManager = scopeServices.GetRequiredService<RoleManager<IdentityRole<long>>>();
+        var userManager = scopeServices.GetRequiredService<UserManager<AppUser>>();
+
+        // ── Roles ──
+        string[] roles = ["ADMIN", "USER"];
+        foreach (var role in roles) {
+            if (!await roleManager.RoleExistsAsync(role)) {
+                await roleManager.CreateAsync(new IdentityRole<long>(role));
+                logger.LogInformation("Rol '{Role}' creado", role);
+            }
+        }
+
+        // ── Usuario ADMIN ──
+        const string adminEmail = "admin@admin.com";
+        if (await userManager.FindByEmailAsync(adminEmail) is null) {
+            var admin = new AppUser {
+                UserName = adminEmail,
+                Email = adminEmail,
+                Nombre = "Admin",
+                Apellido = "Sistema",
+                Createdt = DateTime.UtcNow
+            };
+
+            var result = await userManager.CreateAsync(admin, "Admin123!");
+            if (result.Succeeded) {
+                await userManager.AddToRoleAsync(admin, "ADMIN");
+                logger.LogInformation("Usuario admin creado: {Email}", adminEmail);
+            } else {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                logger.LogWarning("Error al crear admin: {Errors}", errors);
+            }
+        }
+
+        // ── Usuario USER ──
+        const string userEmail = "user@user.com";
+        if (await userManager.FindByEmailAsync(userEmail) is null) {
+            var user = new AppUser {
+                UserName = userEmail,
+                Email = userEmail,
+                Nombre = "Usuario",
+                Apellido = "Regular",
+                Createdt = DateTime.UtcNow
+            };
+
+            var result = await userManager.CreateAsync(user, "User123!");
+            if (result.Succeeded) {
+                await userManager.AddToRoleAsync(user, "USER");
+                logger.LogInformation("Usuario regular creado: {Email}", userEmail);
+            } else {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                logger.LogWarning("Error al crear usuario: {Errors}", errors);
+            }
+        }
+    }
+}
+
+=== ARCHIVO: AuthService.cs ===
+
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Config;
+using FunkoApiV._2.Dto.Auth;
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Serilog;
+
+namespace FunkoApiV._2.Service;
+
+public class AuthService(
+    AppDbContext context, 
+    UserManager<AppUser> userManager, 
+    SignInManager<AppUser> signUser, 
+    IOptions<JwtSettings> options) : IAuthService, IScopedService {
+    
+    public async Task<Result<AuthResponseDto, DomainError>> Login(LoginDto loginDto) {
+        Log.Information("Email: {Email} logeandose", loginDto.Email);
+        var user = await userManager.FindByEmailAsync(loginDto.Email);
+        if (user == null) {
+            Log.Warning("Login fallido: Usuario con emais {Email} no encontrado", loginDto.Email);
+            return Result.Failure<AuthResponseDto, DomainError>(new UnauthorizedError("Error de logging"));
+        }
+        var res = await signUser.CheckPasswordSignInAsync(user, loginDto.Password, false);
+        if (!res.Succeeded) {
+            Log.Warning("Login fallido: Contraseña incorrecta");
+            return Result.Failure<AuthResponseDto, DomainError>(new UnauthorizedError("Contraseña incorrecta"));
+        }
+        var role = (await userManager.GetRolesAsync(user)).FirstOrDefault() ?? "USER";
+        var token = GenerateJwtToken(user, role);
+
+        Log.Information("Login exitoso para {Email} con rol {Role}", loginDto.Email, role);
+        return Result.Success<AuthResponseDto, DomainError>(token);
+    }
+
+    public async Task<Result<AuthResponseDto, DomainError>> Signup(SignupDto signupDto) {
+        Log.Information("Intento de registro para {Email}", signupDto.Email);
+
+        var existingUser = await userManager.FindByEmailAsync(signupDto.Email);
+        if (existingUser is not null) {
+            Log.Warning("Registro fallido: {Email} ya existe", signupDto.Email);
+            return Result.Failure<AuthResponseDto, DomainError>(
+                new Conflict($"El usuario con email {signupDto.Email} ya existe"));
+        }
+        var user = new AppUser {
+            UserName = signupDto.Email,
+            Email = signupDto.Email,
+            Nombre = signupDto.Nombre,
+            Apellido = signupDto.Apellido,
+            Createdt = DateTime.UtcNow
+        };
+
+        var result = await userManager.CreateAsync(user, signupDto.Password);
+        if (!result.Succeeded) {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            Log.Warning("Registro fallido para {Email}: {Errors}", signupDto.Email, errors);
+            return Result.Failure<AuthResponseDto, DomainError>(
+                new BusinessRuleError($"Error al crear el usuario: {errors}"));
+        }
+
+        await userManager.AddToRoleAsync(user, "USER");
+
+        var role = "USER";
+        var token = GenerateJwtToken(user, role);
+
+        Log.Information("Registro exitoso para {Email} con rol {Role}", signupDto.Email, role);
+        return Result.Success<AuthResponseDto, DomainError>(token);
+    }
+
+    public async Task<Result<UserDto, DomainError>> GetMe(long userId) {
+        Log.Debug("Consultando usuario {UserId}", userId);
+
+        var user = await context.Users.FindAsync(userId);
+        if (user is null) {
+            return Result.Failure<UserDto, DomainError>(
+                NotFound.FromId(userId.ToString(), "Usuario"));
+        }
+        var role = (await userManager.GetRolesAsync(user)).FirstOrDefault() ?? "USER";
+        return Result.Success<UserDto, DomainError>(
+            new UserDto(user.Id, user.Email ?? "", user.Nombre, user.Apellido, role));
+    }
+    
+    private AuthResponseDto GenerateJwtToken(AppUser user, string role) {
+        var settings = options.Value;
+        var expires = DateTime.UtcNow.AddMinutes(settings.ExpirationMin);
+
+        var claims = new List<Claim> {
+            new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new(ClaimTypes.Email, user.Email ?? ""),
+            new(ClaimTypes.Role, role),
+            new(ClaimTypes.Name, $"{user.Nombre} {user.Apellido}".Trim())
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: settings.Issuer,
+            audience: settings.Audience,
+            claims: claims,
+            expires: expires,
+            signingCredentials: credentials);
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        return new AuthResponseDto(tokenString, user.Email ?? "", role, expires);
+    }
+}
+
+=== ARCHIVO: IAuthService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto.Auth; 
+using FunkoApiV._2.Error;
+using Microsoft.AspNetCore.Identity;
+
+namespace FunkoApiV._2.Service; // Ajusta según tu namespace
+
+/// <summary>
+/// Define las operaciones del servicio de autenticación y gestión de usuarios.
+/// </summary>
+public interface IAuthService {
+    /// <summary>
+    /// Autentica un usuario con credenciales locales (email/usuario y contraseña).
+    /// </summary>
+    /// <param name="loginDto">Datos de inicio de sesión (credenciales del usuario).</param>
+    /// <returns>
+    /// Un <see cref="Result{AuthResponseDto, DomainError}"/> que contiene el DTO de respuesta de autenticación
+    /// con el token y datos del usuario, o un <see cref="DomainError"/> si las credenciales son inválidas.
+    /// </returns>
+    Task<Result<AuthResponseDto, DomainError>> Login(LoginDto loginDto);
+    /// <summary>
+    /// Registra un nuevo usuario en el sistema.
+    /// </summary>
+    /// <param name="signupDto">Datos de registro del nuevo usuario.</param>
+    /// <returns>
+    /// Un <see cref="Result{AuthResponseDto, DomainError}"/> con el DTO de respuesta de autenticación
+    /// tras el registro, o un <see cref="DomainError"/> si el email/usuario ya existe o los datos son inválidos.
+    /// </returns>
+    Task<Result<AuthResponseDto, DomainError>> Signup(SignupDto signupDto);
+
+    /// <summary>
+    /// Obtiene los datos del usuario autenticado a partir de su identificador.
+    /// </summary>
+    /// <param name="userId">Identificador único del usuario.</param>
+    /// <returns>
+    /// Un <see cref="Result{UserDto, DomainError}"/> con los datos del usuario, o un <see cref="DomainError"/>
+    /// si el usuario no existe.
+    /// </returns>
+    Task<Result<UserDto, DomainError>> GetMe(long userId);
+}
+
+=== ARCHIVO: CassandraService.cs ===
+
+using FunkoApiV._2.Dto.Cassandra;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Mapper.Cassandra;
+using FunkoApiV._2.Repository.Cassandra;
+
+namespace FunkoApiV._2.Service.Cassandra;
+
+public class CassandraService(ICassandraRepository cassandraRepository) : ICassandraService, IScopedService {
+    public async Task<IReadOnlyList<FunkosPorCategoriaDto>> GetFunkosPorCategoria(string categoriaId) {
+        var funkoList = await cassandraRepository.GetFunkosPorCategoria(categoriaId);
+        return funkoList.Select(p => p.ToDto()).ToList();
+    }
+
+    public async Task<IReadOnlyList<FunkosPorProveedorDto>> GetFunkosPorProveedor(string proveedorId) {
+        var funkoList = await cassandraRepository.GetFunkosPorProveedor(proveedorId);
+        return funkoList.Select(p => p.ToDto()).ToList();
+    }
+
+    public async Task<IReadOnlyList<FunkoPorProveedorCategoriaDto>> GetFunkosPorProveedorCategoria(string proveedorId, string categoriaId) {
+        var funkoList = await cassandraRepository.GetFunkosPorProveedorCategoria(proveedorId, categoriaId);
+        return funkoList.Select(p => p.ToDto()).ToList();
+    }
+}
+
+=== ARCHIVO: ICassandraService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto.Cassandra;
+using FunkoApiV._2.Error;
+
+namespace FunkoApiV._2.Service.Cassandra;
+
+public interface ICassandraService {
+    Task<IReadOnlyList<FunkosPorCategoriaDto>> GetFunkosPorCategoria(string categoriaId);
+
+    Task<IReadOnlyList<FunkosPorProveedorDto>> GetFunkosPorProveedor(string proveedorId);
+
+    Task<IReadOnlyList<FunkoPorProveedorCategoriaDto>> GetFunkosPorProveedorCategoria(string proveedorId, string categoriaId);
+}
+
+=== ARCHIVO: CachedCategoriaService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiMongo.Cache;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Repository;
+
+namespace FunkoApiV._2.Service;
+
+public class CachedCategoriaService(
+    ICategoriaService inner,
+    ICacheService cache,
+    IFunkoRepository funkoRepo
+) : ICategoriaService {
+    private static string ByIdKey(string id) => $"categoria:{id}";
+
+    /// <summary>
+    /// Los listados van paginados y filtrados: no se cachean.
+    /// </summary>
+    public Task<PagedResult<CategoriaDto>> GetAll(CategoriaFilterRequest filter) =>
+        inner.GetAll(filter);
+
+    public async Task<Result<CategoriaDto, DomainError>> GetById(string id) {
+        var key = ByIdKey(id);
+        var cached = await cache.GetAsync<CategoriaDto>(key);
+        if (cached is not null)
+            return Result.Success<CategoriaDto, DomainError>(cached);
+
+        var result = await inner.GetById(id);
+        if (result.IsSuccess)
+            await cache.SetAsync(key, result.Value);
+        return result;
+    }
+
+    public Task<Result<CategoriaDto, DomainError>> Add(CategoriaRequestDto request) =>
+        inner.Add(request);
+
+    public async Task<Result<CategoriaDto, DomainError>> Update(string id, CategoriaRequestDto request) {
+        var result = await inner.Update(id, request);
+        if (result.IsFailure)
+            return result;
+
+        await cache.RemoveAsync(ByIdKey(id));
+        
+
+        return result;
+    }
+
+    public async Task<Result<bool, DomainError>> Delete(string id) {
+        var result = await inner.Delete(id);
+        if (result.IsSuccess)
+            await cache.RemoveAsync(ByIdKey(id));
+        return result;
+    }
+}
+
+=== ARCHIVO: CategoriaService.cs ===
+
+using CSharpFunctionalExtensions;
+using FluentValidation;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Mapper;
+using FunkoApiV._2.Repository;
+
+namespace FunkoApiV._2.Service;
+
+public class CategoriaService(
+    ICategoriaRepository repo,
+    IFunkoRepository funkoRepo,
+    ILogger<CategoriaService> log,
+    IValidator<CategoriaRequestDto> validation
+) : ICategoriaService, IScopedService {
+
+    public async Task<PagedResult<CategoriaDto>> GetAll(CategoriaFilterRequest filter) {
+        log.LogInformation("Buscando categorÃ­as con filtros {@Filter}", filter);
+        var (items, total) = await repo.GetPagedAsync(filter);
+        return new PagedResult<CategoriaDto> {
+            Items = items.Select(c => c.ToDto()).ToList(),
+            TotalCount = total,
+            Page = filter.Page,
+            PageSize = filter.Size
+        };
+    }
+
+    public async Task<Result<CategoriaDto, DomainError>> GetById(string id) {
+        log.LogInformation("Obteniendo categorÃ­a por id: {@Id}", id);
+        return (await repo.GetById(id)).Map(c => c.ToDto());
+    }
+
+    public async Task<Result<CategoriaDto, DomainError>> Add(CategoriaRequestDto request) {
+        log.LogInformation("Creando categorÃ­a: {@Categoria}", request);
+        var result = await validation.ValidateAsync(request);
+        if (!result.IsValid) {
+            log.LogWarning("ValidaciÃ³n fallida al crear categorÃ­a: {@Errors}", result.Errors);
+            return Result.Failure<CategoriaDto, DomainError>(
+                new ValidationError(result.Errors[0].ErrorMessage));
+        }
+
+        return (await repo.CreateAsync(request.ToModel())).Map(c => c.ToDto());
+    }
+
+    public async Task<Result<CategoriaDto, DomainError>> Update(string id, CategoriaRequestDto request) {
+        log.LogInformation("Actualizando categorÃ­a {Id}: {@Categoria}", id, request);
+        var result = await validation.ValidateAsync(request);
+        if (!result.IsValid) {
+            log.LogWarning("ValidaciÃ³n fallida al actualizar categorÃ­a {Id}: {@Errors}", id, result.Errors);
+            return Result.Failure<CategoriaDto, DomainError>(
+                new ValidationError(result.Errors[0].ErrorMessage));
+        }
+
+        return (await repo.UpdateAsync(id, request.ToModel())).Map(c => c.ToDto());
+    }
+
+    public async Task<Result<bool, DomainError>> Delete(string id) {
+        log.LogInformation("Eliminando categorÃ­a: {@Id}", id);
+        var paged = await funkoRepo.GetPagedAsync(new FunkoFilterRequest { CategoriaId = id, Page = 0, Size = 1 });
+        if (paged.Total > 0) 
+            return Result.Failure<bool, DomainError>(
+                new Conflict("No se puede borrar la categoria si hay un funko asociado"));
+        return await repo.DeleteAsync(id);
+    }
+}
+
+=== ARCHIVO: ICategoriaService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+
+namespace FunkoApiV._2.Service;
+
+public interface ICategoriaService {
+    Task<PagedResult<CategoriaDto>> GetAll(CategoriaFilterRequest filter);
+
+    Task<Result<CategoriaDto, DomainError>> GetById(string id);
+
+    Task<Result<CategoriaDto, DomainError>> Add(CategoriaRequestDto request);
+
+    Task<Result<CategoriaDto, DomainError>> Update(string id, CategoriaRequestDto request);
+
+    Task<Result<bool, DomainError>> Delete(string id);
+}
+
+=== ARCHIVO: CachedFunkoService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiMongo.Cache;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+
+namespace FunkoApiV._2.Service;
+
+public class CachedFunkoService(IFunkoService inner, ICacheService cache) : IFunkoService {
+    private static string ByIdKey(int id) => $"funko:{id}";
+
+    /// <summary>
+    /// Los listados van paginados y filtrados, así que cada consulta es distinta:
+    /// no se cachean. Solo se cachea la ficha por id.
+    /// </summary>
+    public Task<PagedResult<FunkoResponseDto>> GetAll(FunkoFilterRequest filter) =>
+        inner.GetAll(filter);
+
+    public async Task<Result<FunkoResponseDto, DomainError>> GetById(int id) {
+        var key = ByIdKey(id);
+        var cached = await cache.GetAsync<FunkoResponseDto>(key);
+        if (cached is not null)
+            return Result.Success<FunkoResponseDto, DomainError>(cached);
+
+        var result = await inner.GetById(id);
+        if (result.IsSuccess)
+            await cache.SetAsync(key, result.Value);
+        return result;
+    }
+
+    public Task<Result<FunkoResponseDto, DomainError>> Add(FunkoCreateRequest request) =>
+        inner.Add(request);
+
+    public async Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest request) {
+        var result = await inner.Update(id, request);
+        if (result.IsSuccess)
+            await cache.RemoveAsync(ByIdKey(id));
+        return result;
+    }
+
+    public async Task<Result<bool, DomainError>> Delete(int id) {
+        var result = await inner.Delete(id);
+        if (result.IsSuccess)
+            await cache.RemoveAsync(ByIdKey(id));
+        return result;
+    }
+
+    public Task<Result<string, DomainError>> UploadImagen(IFormFile file) =>
+        inner.UploadImagen(file);
+
+    public async Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(int id, IFormFile file) {
+        var result = await inner.UpdateImagen(id, file);
+        if (result.IsSuccess)
+            await cache.RemoveAsync(ByIdKey(id));
+        return result;
+    }
+}
+
+=== ARCHIVO: FunkoService.cs ===
+
+using CSharpFunctionalExtensions;
+using FluentValidation;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Mapper;
+using FunkoApiV._2.Repository;
+using FunkoApiV._2.Storage;
+
+namespace FunkoApiV._2.Service;
+
+public class FunkoService(
+    IFunkoRepository repo,
+    IProveedorRepository repoProveedor,
+    ICategoriaRepository  repoCategoria,
+    ILogger<FunkoService> log,
+    IValidator<FunkoCreateRequest> createValidation,
+    IValidator<FunkoUpdateRequest> updateValidation,
+    IStorageService storage
+) : IFunkoService, IScopedService {
+
+    public async Task<PagedResult<FunkoResponseDto>> GetAll(FunkoFilterRequest filter) {
+        log.LogInformation("Buscando funkos con filtros {@Filter}", filter);
+        var (items, total) = await repo.GetPagedAsync(filter);
+        return new PagedResult<FunkoResponseDto> {
+            Items = items.Select(f => f.ToDto()).ToList(),
+            TotalCount = total,
+            Page = filter.Page,
+            PageSize = filter.Size
+        };
+    }
+
+    public async Task<Result<FunkoResponseDto, DomainError>> GetById(int id) {
+        log.LogInformation("Obteniendo funko por id: {@Id}", id);
+        return (await repo.GetByIdAsync(id)).Map(f => f.ToDto());
+    }
+
+    public async Task<Result<FunkoResponseDto, DomainError>> Add(FunkoCreateRequest request) {
+        log.LogInformation("Creando funko: {@Funko}", request);
+        
+        var categoria = await repoCategoria.GetById(request.CategoriaId);
+        if (categoria.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("La categoría especificada no existe o está eliminada"));
+
+        var proveedor = await repoProveedor.GetById(request.ProveedorId);
+        if (proveedor.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("El proveedor especificado no existe o está eliminado"));
+
+        var validation = await createValidation.ValidateAsync(request);
+        if (!validation.IsValid) {
+            log.LogWarning("Validación fallida al crear funko: {@Errors}", validation.Errors);
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new ValidationError(validation.Errors[0].ErrorMessage));
+        }
+
+        return (await repo.CreateAsync(request.ToModel())).Map(f => f.ToDto());
+    }
+
+    public async Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest request) {
+        log.LogInformation("Actualizando funko {Id}: {@Funko}", id, request);
+        
+        var funkoExistente = await repo.GetByIdAsync(id);
+        if (funkoExistente.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(funkoExistente.Error);
+
+        if (funkoExistente.Value.IsDeleted)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("No se puede actualizar un funko eliminado"));
+
+        var categoria = await repoCategoria.GetById(request.CategoriaId);
+        if (categoria.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("La categoría especificada no existe o está eliminada"));
+
+        var proveedor = await repoProveedor.GetById(request.ProveedorId);
+        if (proveedor.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new Conflict("El proveedor especificado no existe o está eliminado"));
+
+        var validation = await updateValidation.ValidateAsync(request);
+        if (!validation.IsValid) {
+            log.LogWarning("Validación fallida al actualizar funko {Id}: {@Errors}", id, validation.Errors);
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new ValidationError(validation.Errors[0].ErrorMessage));
+        }
+
+        return (await repo.UpdateAsync(id, request.ToModel())).Map(f => f.ToDto());
+    }
+
+    public async Task<Result<bool, DomainError>> Delete(int id) {
+        log.LogInformation("Eliminando funko: {@Id}", id);
+        return await repo.DeleteAsync(id);
+    }
+
+    public Task<Result<string, DomainError>> UploadImagen(IFormFile file) =>
+        storage.SaveFileAsync(file, "funkos");
+
+    public async Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(int id, IFormFile file) {
+        var funko = await repo.GetByIdAsync(id);
+        if (funko.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(funko.Error);
+
+        var guardada = await storage.SaveFileAsync(file, "funkos");
+        if (guardada.IsFailure)
+            return Result.Failure<FunkoResponseDto, DomainError>(guardada.Error);
+
+        var actualizado = await repo.SetImagenAsync(id, guardada.Value);
+        if (actualizado.IsFailure) {
+            var borrado = await storage.DeleteFileAsync(guardada.Value);
+            if (borrado.IsFailure)
+                log.LogError("No se pudo limpiar la imagen temporal {Imagen}: {Error}",
+                    guardada.Value, borrado.Error.Message);
+            return Result.Failure<FunkoResponseDto, DomainError>(actualizado.Error);
+        }
+
+        if (!string.IsNullOrWhiteSpace(funko.Value.Imagen)) {
+            var borrado = await storage.DeleteFileAsync(funko.Value.Imagen);
+            if (borrado.IsFailure)
+                log.LogWarning("La imagen anterior del funko {Id} no se pudo eliminar: {Error}",
+                    id, borrado.Error.Message);
+        }
+
+        return actualizado.Map(f => f.ToDto());
+    }
+    
+}
+
+=== ARCHIVO: IFunkoService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Common;
+using FunkoApiV._2.Error;
+
+namespace FunkoApiV._2.Service;
+
+public interface IFunkoService {
+    Task<PagedResult<FunkoResponseDto>> GetAll(FunkoFilterRequest filter);
+
+    Task<Result<FunkoResponseDto, DomainError>> GetById(int id);
+
+    Task<Result<FunkoResponseDto, DomainError>> Add(FunkoCreateRequest request);
+
+    Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest request);
+
+    Task<Result<bool, DomainError>> Delete(int id);
+    
+    Task<Result<string, DomainError>> UploadImagen(IFormFile file);
+
+    Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(int id, IFormFile file);
+}
+
+=== ARCHIVO: CachedProveedorService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiMongo.Cache;
+using FunkoApiV._2.Dto.Proveedor;
+using FunkoApiV._2.Error;
+
+namespace FunkoApiV._2.Service.Proveedor;
+
+public class CachedProveedorService(IProveedorService inner, ICacheService cache) : IProveedorService {
+    private const string AllKey = "proveedor:all";
+    private const string DeletedKey = "proveedor:deleted";
+    private static string ByIdKey(string id) => $"proveedor:{id}";
+    
+    public async Task<IReadOnlyList<ProveedorResponseDto>> GetAll() {
+        var result = await cache.GetOrSetAsync(
+            AllKey,
+            async () => await inner.GetAll()
+        );
+        return result ?? [];
+    }
+
+    public async Task<IReadOnlyCollection<ProveedorResponseDto>> GetDeleted() {
+        var result = await cache.GetOrSetAsync(
+            DeletedKey,
+            async () => await inner.GetDeleted()
+        );
+        return result ?? [];
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> GetById(string id) {
+        var key = ByIdKey(id);
+        var cached = await cache.GetAsync<ProveedorResponseDto>(key);
+        if (cached != null) 
+            return Result.Success<ProveedorResponseDto, DomainError>(cached);
+        var result = await inner.GetById(id);
+        if (result.IsSuccess)
+            await cache.SetAsync(key, result.Value);
+        return result;
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> Add(ProveedorRequestDto proveedor) {
+        var res = await inner.Add(proveedor);
+        if (res.IsSuccess) {
+            await cache.RemoveAsync(AllKey);
+        }
+        return res;
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> Update(string id, ProveedorRequestDto funko) {
+        var res = await inner.Update(id, funko);
+        if (!res.IsSuccess) return res;
+        await cache.RemoveAsync(ByIdKey(id));
+        await cache.RemoveAsync(AllKey);
+        return res;
+    }
+
+    public async Task<Result<bool, DomainError>> SoftDelete(string id) {
+        var res = await inner.SoftDelete(id);
+        if (!res.IsSuccess) return res;
+        await cache.RemoveAsync(ByIdKey(id));
+        await cache.RemoveAsync(AllKey);
+        await cache.RemoveAsync(DeletedKey);
+        return res;
+        
+    }
+}
+
+=== ARCHIVO: IProveedorService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Proveedor;
+using FunkoApiV._2.Error;
+
+namespace FunkoApiV._2.Service;
+
+public interface IProveedorService {
+    Task<IReadOnlyList<ProveedorResponseDto>> GetAll();
+    Task<IReadOnlyCollection<ProveedorResponseDto>> GetDeleted();
+    Task<Result<ProveedorResponseDto, DomainError>> GetById(string id);
+    Task<Result<ProveedorResponseDto, DomainError>> Add(ProveedorRequestDto proveedor);
+    Task<Result<ProveedorResponseDto, DomainError>> Update(string id, ProveedorRequestDto proveedor);
+    Task<Result<bool, DomainError>> SoftDelete(string id);
+}
+
+=== ARCHIVO: ProveedorService.cs ===
+
+using CSharpFunctionalExtensions;
+using FluentValidation;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Dto.Proveedor;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+using FunkoApiV._2.Mapper.Provedor;
+using FunkoApiV._2.Repository;
+
+namespace FunkoApiV._2.Service;
+
+public class ProveedorService(
+    IProveedorRepository repo,
+    IFunkoRepository funkoRepo,
+    ILogger<ProveedorService> log,
+    IValidator<ProveedorRequestDto> validator) : IProveedorService, IScopedService {
+    public async Task<IReadOnlyList<ProveedorResponseDto>> GetAll() {
+        log.LogDebug("Obteniendo todos los proveedores");
+        var prov = await repo.GetAll();
+        return prov.Select(p => p.ToDto()).ToList();
+    }
+
+    public async Task<IReadOnlyCollection<ProveedorResponseDto>> GetDeleted() {
+        log.LogDebug("Obteniendo todos los proveedores eliminados");
+        var deleted = await repo.GetAllDeleted();
+        return deleted.Select(t => t.ToDto()).ToList();
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> GetById(string id) {
+        log.LogDebug("Obteniendo proveedor con id: {@Id}", id);
+        var prov = await repo.GetById(id);
+        return prov.Map(p => p.ToDto());
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> Add(ProveedorRequestDto proveedor) {
+        log.LogDebug("Añadiendo proveedor: {@Prov}", proveedor);
+        var validation = await validator.ValidateAsync(proveedor);
+        if (!validation.IsValid) {
+            log.LogWarning("Validación fallida al crear funko: {@Errors}", validation.Errors);
+            return Result.Failure<ProveedorResponseDto, DomainError>(
+                new ValidationError(validation.Errors[0].ErrorMessage));
+        }
+        var creado = await repo.Add(proveedor.ToModel());
+        return creado.Map(p => p.ToDto());
+    }
+
+    public async Task<Result<ProveedorResponseDto, DomainError>> Update(string id, ProveedorRequestDto proveedor) {
+        log.LogDebug("Actualizando proveedor con id: {Id} with: {@Prov}", id, proveedor);
+
+        var validation = await validator.ValidateAsync(proveedor);
+        if (!validation.IsValid) {
+            log.LogWarning("Validación fallida al actualizar funko {Id}: {@Errors}", id, validation.Errors);
+            return Result.Failure<ProveedorResponseDto, DomainError>(
+                new ValidationError(validation.Errors[0].ErrorMessage));
+        }
+        log.LogDebug("Realizando actualizacion del funko con id: {@Id}", id);
+        return (await repo.Update(id, proveedor.ToModel())).Map(p => p.ToDto());
+    }
+
+    public async Task<Result<bool, DomainError>> SoftDelete(string id) {
+        log.LogDebug("Eliminando proeedor con id: {@Id}", id);
+        var tieneFunkos = await TieneFunkos(id);
+        if (tieneFunkos.IsFailure) {
+            return tieneFunkos;
+        }
+        return await repo.SoftDelete(id);
+    }
+
+    private async Task<Result<bool, DomainError>> TieneFunkos(string id) {
+        var paged = await funkoRepo.GetPagedAsync(
+            new FunkoFilterRequest { ProveedorId = id, Page = 0, Size = 1 });
+        if (paged.Total > 0)
+            return Result.Failure<bool, DomainError>(
+                new Conflict("No se puede borrar el proveedor si hay un funko asociado"));
+        return Result.Success<bool, DomainError>(true);
+    } 
+}
+
+=== ARCHIVO: FileSystemStorageService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure.Interfaces;
+
+namespace FunkoApiV._2.Storage;
+
+public class FileSystemStorageService : IStorageService, ITransientService
+{
+    private readonly string _rootPath;
+    private readonly string _uploadPath;
+    private readonly long _maxFileSize;
+    private readonly HashSet<string> _allowedExtensions;
+    private readonly HashSet<string> _allowedContentTypes;
+    private readonly ILogger<FileSystemStorageService> _logger;
+
+    public FileSystemStorageService(IConfiguration configuration, ILogger<FileSystemStorageService> logger, IWebHostEnvironment env)
+    {
+        _logger = logger;
+
+        var configuredUploadPath = (configuration["Storage:UploadPath"] ?? "uploads")
+            .Replace('\\', '/')
+            .Trim('/');
+        _uploadPath = configuredUploadPath.StartsWith("wwwroot/", StringComparison.OrdinalIgnoreCase)
+            ? configuredUploadPath["wwwroot/".Length..]
+            : configuredUploadPath;
+        _maxFileSize = configuration.GetValue<long>("Storage:MaxFileSize", 5 * 1024 * 1024);
+        _allowedExtensions = (configuration.GetSection("Storage:AllowedExtensions").Get<string[]>()
+            ?? [".jpg", ".jpeg", ".png", ".gif"])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _allowedContentTypes = (configuration.GetSection("Storage:AllowedContentTypes").Get<string[]>()
+            ?? ["image/jpeg", "image/png", "image/gif"])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var webRoot = env.WebRootPath ?? System.IO.Path.Combine(env.ContentRootPath, "wwwroot");
+        _rootPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(webRoot, _uploadPath));
+
+        if (!Directory.Exists(_rootPath))
+            Directory.CreateDirectory(_rootPath);
+
+        _logger.LogInformation("Storage service inicializado en: {Path}", _rootPath);
+    }
+
+    private DomainError? ValidateFile(IFormFile file) {
+        if (file is null or { Length: 0 })
+            return StorageError.ArchivoVacio();
+        if (file.Length > _maxFileSize)
+            return StorageError.ArchivoMuyGrande();
+        if (string.IsNullOrWhiteSpace(file.FileName))
+            return StorageError.NombreArchivoInvalido();
+
+        var extension = System.IO.Path.GetExtension(file.FileName);
+        if (!_allowedExtensions.Contains(extension))
+            return StorageError.ExtensionNoPermitida();
+        if (string.IsNullOrWhiteSpace(file.ContentType) ||
+            !_allowedContentTypes.Contains(file.ContentType))
+            return StorageError.TipoContenidoNoPermitido();
+
+        return null;
+    }
+
+    public async Task<Result<string, DomainError>> SaveFileAsync(IFormFile file, string folder) {
+        var validationError = ValidateFile(file);
+        if (validationError is not null)
+            return Result.Failure<string, DomainError>(validationError);
+
+        string? filePath = null;
+        try
+        {
+            var extension = System.IO.Path.GetExtension(file.FileName).ToLowerInvariant();
+            var filename = $"{Guid.NewGuid():N}{extension}";
+            var relativePath = GetRelativePath(filename, folder);
+            filePath = GetFullPath(relativePath);
+            var folderPath = System.IO.Path.GetDirectoryName(filePath)!;
+            Directory.CreateDirectory(folderPath);
+
+            await using var stream = new FileStream(
+                filePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                81920,
+                useAsync: true);
+            await file.CopyToAsync(stream);
+
+            _logger.LogInformation("Archivo guardado: {Path}", relativePath);
+            return Result.Success<string, DomainError>(relativePath);
+        }
+        catch (Exception ex)
+        {
+            if (filePath is not null && File.Exists(filePath)) {
+                try {
+                    File.Delete(filePath);
+                }
+                catch (Exception cleanupException) {
+                    _logger.LogError(cleanupException, "No se pudo limpiar el archivo incompleto {Path}", filePath);
+                }
+            }
+            _logger.LogError(ex, "Error guardando archivo");
+            return Result.Failure<string, DomainError>(StorageError.ErrorGuardando());
+        }
+    }
+
+    public Task<Result<bool, DomainError>> DeleteFileAsync(string relativePath) {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            return Task.FromResult(Result.Success<bool, DomainError>(true));
+
+        try
+        {
+            var fullPath = GetFullPath(relativePath);
+            if (File.Exists(fullPath))
+            {
+                File.Delete(fullPath);
+                _logger.LogInformation("Archivo eliminado: {Filename}", relativePath);
+            }
+            return Task.FromResult(Result.Success<bool, DomainError>(true));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error eliminando archivo {Filename}", relativePath);
+            return Task.FromResult(Result.Failure<bool, DomainError>(StorageError.ErrorEliminando()));
+        }
+    }
+
+    private string GetFullPath(string filename) {
+        var relativePath = filename.Replace('\\', '/').TrimStart('/');
+        var uploadPrefix = $"{_uploadPath.TrimEnd('/')}/";
+        if (relativePath.StartsWith(uploadPrefix, StringComparison.OrdinalIgnoreCase))
+            relativePath = relativePath[uploadPrefix.Length..];
+
+        var fullPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+            _rootPath,
+            relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar)));
+        var rootPrefix = _rootPath.TrimEnd(
+            System.IO.Path.DirectorySeparatorChar,
+            System.IO.Path.AltDirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+        if (!fullPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("La ruta debe estar dentro del almacenamiento configurado.", nameof(filename));
+
+        return fullPath;
+    }
+
+    private string GetRelativePath(string filename, string folder) {
+        var normalizedFolder = folder.Replace('\\', '/').Trim('/');
+        if (string.IsNullOrWhiteSpace(normalizedFolder) ||
+            normalizedFolder.Split('/').Any(part => part is "." or "..")) {
+            throw new ArgumentException("La carpeta de almacenamiento no es vÃ¡lida.", nameof(folder));
+        }
+
+        return $"/{_uploadPath}/{normalizedFolder}/{filename}";
+    }
+}
+
+=== ARCHIVO: IStorageService.cs ===
+
+using CSharpFunctionalExtensions;
+using FunkoApiV._2.Error;
+
+namespace FunkoApiV._2.Storage;
+
+/// <summary>Abstrae las operaciones de persistencia de imágenes.</summary>
+public interface IStorageService {
+    /// <summary>Guarda la imagen y devuelve su ruta relativa pública.</summary>
+    Task<Result<string, DomainError>> SaveFileAsync(IFormFile file, string folder);
+
+    /// <summary>Elimina una imagen previamente guardada.</summary>
+    Task<Result<bool, DomainError>> DeleteFileAsync(string relativePath);
+}
+
+=== ARCHIVO: ProveedorValidator.cs ===
+
+using FluentValidation;
+using FunkoApiV._2.Dto.Proveedor;
+using FunkoApiV._2.Infrastructure.Interfaces;
+
+namespace FunkoApiV._2.Validator.Proveedor;
+
+public class ProveedorValidator : AbstractValidator<ProveedorRequestDto>, ITransientService{
+    public ProveedorValidator() {
+        RuleFor(x => x.Nombre)
+            .NotEmpty().WithMessage("El nombre es obligatorio")
+            .MinimumLength(2).WithMessage("El nombre debe tener 2 caracteres al menos")
+            .MaximumLength(20).WithMessage("El nombre solo puede tener 20 caracteres");
+        RuleFor(x => x.Direccion)
+            .NotEmpty().WithMessage("La direccion es obligatoria")
+            .MinimumLength(2).WithMessage("La direccion debe tener 2 caracteres al menos")
+            .MaximumLength(20).WithMessage("La direccion solo puede tener 200 caracteres");
+    }
+}
+
+=== ARCHIVO: CategoriaValidator.cs ===
+
+using FluentValidation;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Infrastructure.Interfaces;
+
+namespace FunkoApiV._2.Validator;
+
+public class CategoriaValidator : AbstractValidator<CategoriaRequestDto>, ITransientService {
+    public CategoriaValidator() {
+        RuleFor(x => x.Nombre)
+            .NotEmpty().WithMessage("El nombre es obligatorio")
+            .MinimumLength(3).WithMessage("El nombre debe tener 3 caracteres al menos")
+            .MaximumLength(100).WithMessage("El nombre no puede superar los 100 caracteres");
+
+        RuleFor(x => x.Descripcion)
+            .MaximumLength(500).WithMessage("La descripciÃ³n no puede superar los 500 caracteres");
+    }
+}
+
+=== ARCHIVO: FunkoCreateValidator.cs ===
+
+using FluentValidation;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Infrastructure.Interfaces;
+
+namespace FunkoApiV._2.Validator;
+
+public class FunkoCreateValidator : AbstractValidator<FunkoCreateRequest>, ITransientService {
+    public FunkoCreateValidator() {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("El nombre es obligatorio")
+            .MinimumLength(2).WithMessage("El nombre debe tener 2 caracteres al menos")
+            .MaximumLength(20).WithMessage("El nombre solo puede tener 20 caracteres");
+
+        RuleFor(x => x.Precio)
+            .InclusiveBetween(0.01m, 50.0m).WithMessage("El precio debe estar entre 0.01 y 50.0");
+        
+        RuleFor(x => x.Stock)
+            .GreaterThanOrEqualTo(0).WithMessage("El stock no puede ser negativo");
+        RuleFor(x => x.CategoriaId)
+            .NotEmpty().WithMessage("El ID de la categoría es obligatorio")
+            .Length(11).WithMessage("El ID de la categoría debe tener 11 caracteres");
+
+        RuleFor(x => x.ProveedorId)
+            .NotEmpty().WithMessage("El ID del proveedor es obligatorio")
+            .Matches("^[0-9a-fA-F]{24}$")
+            .WithMessage("El ID del proveedor debe ser un ObjectId de 24 caracteres hex");
+
+        RuleFor(x => x.Imagen)
+            .NotEmpty().WithMessage("La imagen es obligatoria")
+            .MaximumLength(255).WithMessage("La ruta de la imagen no puede superar los 255 caracteres")
+            .Must(p => p.StartsWith("/uploads/funkos/", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("La imagen debe ser una ruta relativa que empiece por /uploads/funkos/");
+    }
+}
+
+=== ARCHIVO: FunkoUpdateValidator.cs ===
+
+using FluentValidation;
+using FunkoApiV._2.Dto;
+using FunkoApiV._2.Infrastructure.Interfaces;
+
+namespace FunkoApiV._2.Validator;
+
+public class FunkoUpdateValidator :  AbstractValidator<FunkoUpdateRequest>, ITransientService{
+    public FunkoUpdateValidator() {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("El nombre es obligatorio")
+            .MinimumLength(2).WithMessage("El nombre debe tener 2 caracteres al menos")
+            .MaximumLength(20).WithMessage("El nombre solo puede tener 20 caracteres");
+
+        RuleFor(x => x.Precio)
+            .InclusiveBetween(0.01m, 50.0m).WithMessage("El precio debe estar entre 0.01 y 50.0");
+        
+        RuleFor(x => x.Stock)
+            .GreaterThanOrEqualTo(0).WithMessage("El stock no puede ser negativo");
+        
+        RuleFor(x => x.CategoriaId)
+            .NotEmpty().WithMessage("El ID de la categoría es obligatorio")
+            .Length(11).WithMessage("El ID de la categoría debe tener 11 caracteres");
+
+        RuleFor(x => x.ProveedorId)
+            .NotEmpty().WithMessage("El ID del proveedor es obligatorio")
+            .Matches("^[0-9a-fA-F]{24}$")
+            .WithMessage("El ID del proveedor debe ser un ObjectId de 24 caracteres hex");
+
+        RuleFor(x => x.Imagen)
+            .MaximumLength(500)
+            .Must(uri => string.IsNullOrWhiteSpace(uri) || Uri.TryCreate(uri, UriKind.Absolute, out _))
+            .WithMessage("La imagen debe ser una URL válida");
+    }
+}
+
+=== ARCHIVO: YoutubeIdAttribute.cs ===
+
+namespace FunkoApiV._2.Models;
+
+[AttributeUsage(AttributeTargets.Property)]
+public class YoutubeIdAttribute : Attribute { }
+
+=== ARCHIVO: YouTubeIdValueGenerator.cs ===
+
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.ValueGeneration;
+
+namespace FunkoApiV._2.Models;
+
+public class YouTubeIdValueGenerator : ValueGenerator<string> {
+    private const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+    public static string GenerateId() =>
+        new(Enumerable.Range(0, 11).Select(_ => Chars[Random.Shared.Next(Chars.Length)]).ToArray());
+
+    public override string Next(EntityEntry entry) => GenerateId();
+
+    public override bool GeneratesTemporaryValues => false;
+}
+
+=== ARCHIVO: appsettings.json ===
+
+{
+  "Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "Microsoft.EntityFrameworkCore": "Error"
+      }
+    },
+    "WriteTo": [
+      { "Name": "Console" },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "logs/funko-.log",
+          "rollingInterval": "Day"
+        }
+      }
+    ],
+    "Enrich": ["FromLogContext"]
+  },
+  "ApiSettings": {
+    "Name": "Production"
+  },
+  "DatabaseSettings": {
+    "Name": "funko"
+  },
+  "Cache": {
+    "Name": "Redis",
+    "ExpiryMinutes": 30,
+    "SlidingExpirationMinutes": 60
+  },
+  "ConnectionStrings": {
+    "Postgre": "Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres",
+    "Redis": "redis:6379",
+    "Mongo": "mongodb://mongo_db:27017"
+  },
+  "Storage": {
+    "UploadPath": "wwwroot/uploads",
+    "MaxFileSize": 5242880,
+    "AllowedExtensions": [".jpg", ".jpeg", ".png", ".webp"],
+    "AllowedContentTypes": ["image/jpeg", "image/jpeg", "image/png", "image/webp"]
+  },
+  "Jwt": {
+    "Key": "EstaEsUnaClaveSecretaMuySeguraYDeMasDe16Caracteres!",
+    "Issuer": "FunkoApi",
+    "Audience": "FunkoApi",
+    "ExpirationMin": 30
+  },
+  "Cassandra": {
+    "Hosts": [ "cassandra" ],
+    "Port": 9043,
+    "Keyspace": "funkos"
+  }
+}
+
+=== ARCHIVO: FunkoApiV.2.csproj ===
+
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>FunkoApiV._2</RootNamespace>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="CassandraCSharpDriver" Version="3.23.0" />
+        <PackageReference Include="CSharpFunctionalExtensions" Version="3.7.0" />
+        <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.14" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.14">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.14" />
+        <PackageReference Include="MongoDB.Driver" Version="3.13.0" />
+        <PackageReference Include="MongoDB.EntityFrameworkCore" Version="10.0.4" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+        <PackageReference Include="Scrutor" Version="7.0.0" />
+        <PackageReference Include="Serilog" Version="4.4.0" />
+        <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+        <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+        <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.23.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Controller\NewDirectory1\" />
+    </ItemGroup>
+
+</Project>
+
+=== ARCHIVO: Program.cs ===
+
+using FluentValidation;
+using FunkoApiMongo.Cache;
+using FunkoApiMongo.Config;
+using FunkoApiV._2.Config;
+using FunkoApiV._2.Converters;
+using FunkoApiV._2.Entity;
+using FunkoApiV._2.Infrastructure;
+using FunkoApiV._2.Infrastructure.Cassandra;
+using FunkoApiV._2.Seeders;
+using Microsoft.EntityFrameworkCore;
+using MongoDB.EntityFrameworkCore.Extensions;
+using Serilog;
+
+namespace FunkoApiV._2;
+
+public class Program {
+
+    public static async Task Main(string[] args) {
+
+        var builder = WebApplication.CreateBuilder(args);
+
+        // 0. Inicializar la configuraciÃ³n (Â¡antes de usarla!)
+        FunkoConfig.Init(builder.Configuration);
+
+        // 1. Serilog
+        builder.Host.UseSerilog((context, services, configuration) => configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext());
+
+        // 3. Controladores + OpenAPI
+        builder.Services.AddControllers()
+            .AddJsonOptions(options => {
+                options.JsonSerializerOptions.Converters.Add(new ObjectIdJsonConverter());
+            });
+        
+        builder.Services.AddIdentityConfiguration(builder.Configuration);
+        builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+        builder.Services.AddOpenApi();
+
+        // 4. EF Core: Postgres (Funko/Categoria) + Mongo (Proveedor)
+        builder.Services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(FunkoConfig.PostgresConnection));
+
+        builder.Services.AddDbContext<AppDbContextMongoDb>(options =>
+            options.UseMongoDB(FunkoConfig.MongoConnection, FunkoConfig.MongoDatabase));
+        
+        builder.Services.AddCassandra(builder.Configuration);
+        
+
+        // 5. CachÃ© (Redis, sin bifurcar por entorno)
+        builder.Services.Configure<CacheConfig>(
+            builder.Configuration.GetSection(CacheConfig.CacheName));
+
+        builder.Services.AddStackExchangeRedisCache(options =>
+            options.Configuration = FunkoConfig.RedisConnection);
+
+        builder.Services.AddSingleton<ICacheService, RedisService>();
+
+        // 6. Scrutor (repositorios, servicios y decoradores)
+        builder.Services.AddDependencies();
+
+        var app = builder.Build();
+
+        // 8. OpenAPI siempre (ya no hay dos entornos)
+        app.MapOpenApi();
+
+        // 9. Esquema + seed de Postgres
+        // 9. Esquema + seed de Postgres, Mongo e Identity
+        using (var scope = app.Services.CreateScope()) {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var dbMongo = scope.ServiceProvider.GetRequiredService<AppDbContextMongoDb>();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            var cassandraSession = scope.ServiceProvider.GetRequiredService<Cassandra.ISession>();
+            var cassandraSettings = scope.ServiceProvider.GetRequiredService<CassandraSettings>();
+
+            await cassandraSession.InitializeSchemaAsync(cassandraSettings.Keyspace);
+
+            await db.Database.EnsureCreatedAsync();
+
+            // Datos de negocio (categorÃ­as, proveedores, funkos)
+            await DbSeeder.SeedAsync(db, dbMongo, logger);
+
+            // Roles y usuarios de Identity (contraseÃ±a hasheada correctamente)
+            await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
+        }
+
+        app.UseHttpsRedirection();
+        app.UseStaticFiles();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
+
+        await app.RunAsync();
+    }
+}
