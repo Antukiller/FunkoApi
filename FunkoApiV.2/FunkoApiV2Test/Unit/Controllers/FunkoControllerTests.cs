@@ -27,7 +27,8 @@ public class FunkoControllerTests {
     [Test]
     public async Task GetById_CuandoExiste_Devuelve200() {
         _service.Setup(s => s.GetById(1))
-            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(new FunkoResponseDto { Id = 1, Name = "Kirito" }));
+            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(
+                new FunkoResponseDto(1, "Kirito", 0, 0, null, "", "", "", default, null)));
         var r = await _controller.GetById(1);
         r.Result.Should().BeOfType<OkObjectResult>();
     }
@@ -59,7 +60,8 @@ public class FunkoControllerTests {
     [Test]
     public async Task Create_Exitoso_DevuelveCreatedAtAction() {
         _service.Setup(s => s.Add(It.IsAny<FunkoCreateRequest>()))
-            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(new FunkoResponseDto { Id = 1 }));
+            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(
+                new FunkoResponseDto(1, "", 0, 0, null, "", "", "", default, null)));
 
         (await _controller.Create(new FunkoCreateRequest())).Result.Should().BeOfType<CreatedAtActionResult>();
     }
@@ -75,7 +77,8 @@ public class FunkoControllerTests {
     [Test]
     public async Task Update_Exitoso_DevuelveOk() {
         _service.Setup(s => s.Update(1, It.IsAny<FunkoUpdateRequest>()))
-            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(new FunkoResponseDto { Id = 1 }));
+            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(
+                new FunkoResponseDto(1, "", 0, 0, null, "", "", "", default, null)));
 
         (await _controller.Update(1, new FunkoUpdateRequest())).Result.Should().BeOfType<OkObjectResult>();
     }
@@ -115,7 +118,8 @@ public class FunkoControllerTests {
     [Test]
     public async Task UpdateImagen_Exitoso_DevuelveOk() {
         _service.Setup(s => s.UpdateImagen(1, It.IsAny<IFormFile>()))
-            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(new FunkoResponseDto { Id = 1 }));
+            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(
+                new FunkoResponseDto(1, "", 0, 0, null, "", "", "", default, null)));
 
         (await _controller.UpdateImagen(1, new Mock<IFormFile>().Object)).Result.Should().BeOfType<OkObjectResult>();
     }

@@ -25,7 +25,7 @@ public class CachedFunkoServiceTests {
 
     [Test]
     public async Task GetById_CuandoHayCache_DevuelveCacheYNoLlamaAlInner() {
-        var cached = new FunkoResponseDto { Id = 1, Name = "Kirito" };
+        var cached = new FunkoResponseDto(1, "Kirito", 0, 0, null, "", "", "", default, null);
         _cache.Setup(c => c.GetAsync<FunkoResponseDto>("funko:1")).ReturnsAsync(cached);
         var r = await _sut.GetById(1);
         r.IsSuccess.Should().BeTrue();
@@ -35,7 +35,7 @@ public class CachedFunkoServiceTests {
 
     [Test]
     public async Task GetById_CuandoNoHayCache_LlamaAlInnerYGuardaEnCache() {
-        var dto = new FunkoResponseDto { Id = 1, Name = "Kirito" };
+        var dto = new FunkoResponseDto(1, "Kirito", 0, 0, null, "", "", "", default, null);
         _cache.Setup(c => c.GetAsync<FunkoResponseDto>("funko:1")).ReturnsAsync((FunkoResponseDto?)null);
         _inner.Setup(s => s.GetById(1)).ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(dto));
         var r = await _sut.GetById(1);
@@ -46,7 +46,8 @@ public class CachedFunkoServiceTests {
     [Test]
     public async Task Update_CuandoEsExitoso_InvalidaLaCache() {
         _inner.Setup(s => s.Update(1, It.IsAny<FunkoUpdateRequest>()))
-            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(new FunkoResponseDto { Id = 1 }));
+            .ReturnsAsync(Result.Success<FunkoResponseDto, DomainError>(
+                new FunkoResponseDto(1, "", 0, 0, null, "", "", "", default, null)));
         await _sut.Update(1, new FunkoUpdateRequest());
         _cache.Verify(c => c.RemoveAsync("funko:1", default), Times.Once);
     }
