@@ -31,7 +31,7 @@ public class FunkoService(
         };
     }
 
-    public async Task<Result<FunkoResponseDto, DomainError>> GetById(int id) {
+    public async Task<Result<FunkoResponseDto, DomainError>> GetById(long id) {
         log.LogInformation("Obteniendo funko por id: {@Id}", id);
         return (await repo.GetByIdAsync(id)).Map(f => f.ToDto());
     }
@@ -59,7 +59,7 @@ public class FunkoService(
         return (await repo.CreateAsync(request.ToModel())).Map(f => f.ToDto());
     }
 
-    public async Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest request) {
+    public async Task<Result<FunkoResponseDto, DomainError>> Update(long id, FunkoUpdateRequest request) {
         log.LogInformation("Actualizando funko {Id}: {@Funko}", id, request);
         
         var funkoExistente = await repo.GetByIdAsync(id);
@@ -90,7 +90,7 @@ public class FunkoService(
         return (await repo.UpdateAsync(id, request.ToModel())).Map(f => f.ToDto());
     }
 
-    public async Task<Result<bool, DomainError>> Delete(int id) {
+    public async Task<Result<bool, DomainError>> Delete(long id) {
         log.LogInformation("Eliminando funko: {@Id}", id);
         return await repo.DeleteAsync(id);
     }
@@ -98,7 +98,7 @@ public class FunkoService(
     public Task<Result<string, DomainError>> UploadImagen(IFormFile file) =>
         storage.SaveFileAsync(file, "funkos");
 
-    public async Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(int id, IFormFile file) {
+    public async Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(long id, IFormFile file) {
         var funko = await repo.GetByIdAsync(id);
         if (funko.IsFailure)
             return Result.Failure<FunkoResponseDto, DomainError>(funko.Error);

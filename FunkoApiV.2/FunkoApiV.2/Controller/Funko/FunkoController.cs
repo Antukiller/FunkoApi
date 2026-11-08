@@ -16,7 +16,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
         Ok(await ser.GetAll(filter));
     [Authorize(Roles = "ADMIN")]
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<FunkoResponseDto>> GetById(int id) {
+    public async Task<ActionResult<FunkoResponseDto>> GetById(long id) {
         var resultado = await ser.GetById(id);
         return resultado.IsSuccess
             ? Ok(resultado.Value)
@@ -32,7 +32,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
     }
     [Authorize(Roles = "ADMIN")]
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<FunkoResponseDto>> Update(int id, [FromBody] FunkoUpdateRequest funko) {
+    public async Task<ActionResult<FunkoResponseDto>> Update(long id, [FromBody] FunkoUpdateRequest funko) {
         var result = await ser.Update(id, funko);
         return result.IsSuccess
             ? Ok(result.Value)
@@ -40,7 +40,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
     }
     [Authorize(Roles = "ADMIN")]
     [HttpDelete("{id:int}")]
-    public async Task<ActionResult<bool>> Delete(int id) {
+    public async Task<ActionResult<bool>> Delete(long id) {
         var result = await ser.Delete(id);
         return result.IsSuccess
             ? NoContent()
@@ -57,7 +57,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
 
     [HttpPatch("{id:int}/imagen")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<FunkoResponseDto>> UpdateImagen(int id, [FromForm] IFormFile file) {
+    public async Task<ActionResult<FunkoResponseDto>> UpdateImagen(long id, [FromForm] IFormFile file) {
         var result = await ser.UpdateImagen(id, file);
         return result.IsSuccess
             ? Ok(result.Value)
