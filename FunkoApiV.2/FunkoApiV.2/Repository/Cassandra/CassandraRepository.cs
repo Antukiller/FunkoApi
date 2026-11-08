@@ -1,4 +1,5 @@
-﻿using Cassandra.Data.Linq;
+﻿using Cassandra;
+using Cassandra.Data.Linq;
 using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Models.Cassandra;
 using ISession = Cassandra.ISession;
@@ -29,5 +30,41 @@ public class CassandraRepository(ISession session): ICassandraRepository, IScope
             .Where(f => f.CategoriaId == categoriaId && f.ProveedorId == proveedorId)
             .ExecuteAsync();
         return funkos.ToList();
+    }
+
+    public async Task SincronizarFunkoAsync(int funkoId, string nombre, int stock, decimal precio, string categoriaId,
+        string categoriaNombre, string proveedorId, string proveedorNombre) {
+        await session.ExecuteAsync(new SimpleStatement(
+            "INSERT INTO funkos_por_categorias " +
+            "(categoria_id, funkos_id, nombre, stock, precio, categoria_nombre) " +
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            categoriaId, funkoId, nombre, stock, precio, categoriaNombre));
+
+        await session.ExecuteAsync(new SimpleStatement(
+            "INSERT INTO funkos_por_proveedor " +
+            "(proveedor_id, funkos_id, nombre, stock, precio, proveedor_nombre) " +
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            proveedorId, funkoId, nombre, stock, precio, proveedorNombre));
+
+        await session.ExecuteAsync(new SimpleStatement(
+            "INSERT INTO funkos_por_proveedor_categoria " +
+            "(proveedor_id, categoria_id, funkos_id, nombre, proveedor_nombre, categoria_nombre) " +
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            proveedorId, categoriaId, funkoId, nombre, proveedorNombre, categoriaNombre));   
+    }
+
+    public async Task EliminarFunkoAsync(string categoriaId, string proveedorId, int funkoId) {
+        await session.ExecuteAsync(new SimpleStatement(
+            "DELETE FROM funkos_por_categorias WHERE categoria_id = ? AND funkos_id = ?",
+            categoriaId, funkoId));
+
+        await session.ExecuteAsync(new SimpleStatement(
+            "DELETE FROM funkos_por_proveedor WHERE proveedor_id = ? AND funkos_id = ?",
+            proveedorId, funkoId));
+
+        await session.ExecuteAsync(new SimpleStatement(
+            "DELETE FROM funkos_por_proveedor_categoria " +
+            "WHERE proveedor_id = ? AND categoria_id = ? AND funkos_id = ?",
+            proveedorId, categoriaId, funkoId));
     }
 }

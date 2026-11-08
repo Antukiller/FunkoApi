@@ -18,6 +18,7 @@ public static class CassandraSeeder {
 
         // ── 1. Funkos activos con su categoría (Postgres) ──
         var funkos = await db.Funkos
+            .Where(f => !f.IsDeleted)
             .Include(f => f.Categoria)
             .ToListAsync();
 
