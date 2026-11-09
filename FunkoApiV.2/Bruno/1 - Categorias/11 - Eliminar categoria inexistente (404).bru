@@ -1,0 +1,20 @@
+meta {
+  name: Eliminar categoria inexistente (404)
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/api/categorias/NoExiste001
+  body: none
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

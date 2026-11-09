@@ -1,0 +1,33 @@
+meta {
+  name: Buscar funkos por categoria y precio
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/funkos?categoriaId={{categoriaId}}&precioMin=10&precioMax=20&page=0&size=10
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("items es un array", function() {
+    expect(res.body.items).to.be.an("array");
+  });
+  test("todos filtrados por categoria", function() {
+    var items = res.body.items;
+    for (var i = 0; i < items.length; i++) {
+      expect(items[i].categoriaId).to.equal(bru.getEnvVar("categoriaId"));
+    }
+  });
+  test("precio dentro del rango", function() {
+    var items = res.body.items;
+    for (var i = 0; i < items.length; i++) {
+      expect(items[i].precio).to.be.at.least(10);
+      expect(items[i].precio).to.be.at.most(20);
+    }
+  });
+}

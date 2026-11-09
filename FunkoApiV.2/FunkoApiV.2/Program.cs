@@ -36,6 +36,7 @@ public class Program {
         
         builder.Services.AddIdentityConfiguration(builder.Configuration);
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+        builder.Services.AddGraphQLConfig(builder.Environment);
 
         builder.Services.AddOpenApi();
 
@@ -78,6 +79,7 @@ public class Program {
             await cassandraSession.InitializeSchemaAsync(cassandraSettings.Keyspace);
 
             await db.Database.EnsureCreatedAsync();
+            await PostgresSchemaInitializer.EnsureSchemaAsync(db);
 
             // Datos de negocio (categorías, proveedores, funkos)
             await DbSeeder.SeedAsync(db, dbMongo, logger);
@@ -98,7 +100,9 @@ public class Program {
         app.UseStaticFiles();
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseWebSockets();
         app.MapControllers();
+        app.MapGraphQLEndpoints();
 
         await app.RunAsync();
     }

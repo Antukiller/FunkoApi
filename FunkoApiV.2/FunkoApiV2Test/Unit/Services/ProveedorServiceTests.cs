@@ -54,6 +54,26 @@ public class ProveedorServiceTests {
     }
 
     [Test]
+    public async Task GetAll_DevuelveLosProveedoresMapeados() {
+        var proveedor = ProveedorSeed;
+        _repo.Setup(r => r.GetAll()).ReturnsAsync(new List<Proveedor> { proveedor });
+
+        var resultado = await _service.GetAll();
+
+        resultado.Should().ContainSingle().Which.Nombre.Should().Be("Acme");
+    }
+
+    [Test]
+    public async Task GetDeleted_DevuelveLosProveedoresEliminados() {
+        var eliminado = ProveedorSeed with { IsDeleted = true, Nombre = "Acme eliminado" };
+        _repo.Setup(r => r.GetAllDeleted()).ReturnsAsync(new List<Proveedor> { eliminado });
+
+        var resultado = await _service.GetDeleted();
+
+        resultado.Should().ContainSingle().Which.Nombre.Should().Be("Acme eliminado");
+    }
+
+    [Test]
     public async Task Add_ConDatosValidos_DevuelveDto() {
         var p = ProveedorSeed;
         _repo.Setup(r => r.Add(It.IsAny<Proveedor>()))
@@ -69,6 +89,47 @@ public class ProveedorServiceTests {
         r.IsFailure.Should().BeTrue();
         r.Error.Should().BeOfType<ValidationError>();
         _repo.Verify(r => r.Add(It.IsAny<Proveedor>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Add_CuandoRepositorioFalla_PropagaElError() {
+        _repo.Setup(r => r.Add(It.IsAny<Proveedor>()))
+            .ReturnsAsync(Result.Failure<Proveedor, DomainError>(
+                new Conflict("No se pudo crear el proveedor")));
+
+        var resultado = await _service.Add(new ProveedorRequestDto {
+            Nombre = "Acme", Direccion = "Calle 1"
+        });
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<Conflict>();
+    }
+
+    [Test]
+    public async Task Update_ConDatosValidos_DevuelveProveedorActualizado() {
+        var proveedor = ProveedorSeed with {
+            Nombre = "Acme actualizado", Direccion = "Calle 2", UpdatedAt = DateTime.UtcNow
+        };
+        _repo.Setup(r => r.Update(proveedor.Id.ToString(), It.IsAny<Proveedor>()))
+            .ReturnsAsync(Result.Success<Proveedor, DomainError>(proveedor));
+
+        var resultado = await _service.Update(proveedor.Id.ToString(), new ProveedorRequestDto {
+            Nombre = proveedor.Nombre, Direccion = proveedor.Direccion
+        });
+
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Nombre.Should().Be("Acme actualizado");
+        resultado.Value.Direccion.Should().Be("Calle 2");
+    }
+
+    [Test]
+    public async Task Update_ConDireccionInvalida_NoLlamaAlRepositorio() {
+        var resultado = await _service.Update("672f1a8b3c9d4e5f6a7b8c9d",
+            new ProveedorRequestDto { Nombre = "Acme", Direccion = "X" });
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<ValidationError>();
+        _repo.Verify(r => r.Update(It.IsAny<string>(), It.IsAny<Proveedor>()), Times.Never);
     }
 
     [Test]
@@ -92,5 +153,19 @@ public class ProveedorServiceTests {
         var r = await _service.SoftDelete(p.Id.ToString());
         r.IsSuccess.Should().BeTrue();
         r.Value.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task SoftDelete_CuandoRepositorioNoEncuentraProveedor_PropagaNotFound() {
+        var id = ProveedorSeed.Id.ToString();
+        _funkoRepo.Setup(f => f.GetPagedAsync(It.IsAny<FunkoFilterRequest>()))
+            .ReturnsAsync((new List<Funko>(), 0));
+        _repo.Setup(r => r.SoftDelete(id))
+            .ReturnsAsync(Result.Failure<bool, DomainError>(NotFound.FromId(id, "Proveedor")));
+
+        var resultado = await _service.SoftDelete(id);
+
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<NotFound>();
     }
 }

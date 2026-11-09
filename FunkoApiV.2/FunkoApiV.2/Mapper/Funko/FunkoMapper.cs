@@ -5,18 +5,31 @@ using FunkoApiV._2.Models;
 namespace FunkoApiV._2.Mapper;
 
 public static class FunkoMapper {
-    public static FunkoResponseDto ToDto(this Funko f) => new() {
-        Id = f.Id,
-        Name = f.Name,
-        Precio = f.Precio,
-        Stock = f.Stock,
-        Imagen = f.Imagen,
-        Categoria = f.Categoria?.Nombre ?? string.Empty,
-        CategoriaId = f.CategoriaId,
-        ProveedorId = f.ProveedorId,
-        CreatedAt = f.CreatedAt,
-        UpdatedAt = f.UpdatedAt
-    };
+    public static FunkoDto ToFunkoDto(this Funko f) => new(
+        f.Id,
+        f.Name,
+        f.Precio,
+        f.Stock,
+        f.Imagen,
+        f.Categoria?.Nombre ?? string.Empty,
+        f.CategoriaId,
+        f.ProveedorId,
+        f.CreatedAt,
+        f.UpdatedAt
+    );
+
+    public static FunkoResponseDto ToDto(this Funko f) => new(
+        f.Id,
+        f.Name,
+        f.Precio,
+        f.Stock,
+        f.Imagen,
+        f.Categoria?.Nombre ?? string.Empty,
+        f.CategoriaId,
+        f.ProveedorId,
+        f.CreatedAt,
+        f.UpdatedAt
+    );
 
     public static Funko ToModel(this FunkoCreateRequest dto) => new() {
         Name = dto.Name,

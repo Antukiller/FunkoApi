@@ -9,6 +9,7 @@ using FunkoApiV._2.Repository;
 using FunkoApiV._2.Service;
 using FunkoApiV._2.Storage;
 using FunkoApiV._2.Validator;
+using FunkoApiV2Test.Integration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -31,8 +32,10 @@ public class FunkoServiceIntegrationTests {
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp() {
-        _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
-        await _postgres.StartAsync();
+        await DockerTestPrerequisite.StartContainerOrIgnoreAsync(async () => {
+            _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
+            await _postgres.StartAsync();
+        });
     }
 
     [SetUp]
@@ -56,17 +59,38 @@ public class FunkoServiceIntegrationTests {
         _db = _sp.GetRequiredService<AppDbContext>();
         await _db.Database.ExecuteSqlRawAsync("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
         await _db.Database.EnsureCreatedAsync();
+        _db.Categorias.Add(new FunkoApiV._2.Models.Categoria {
+            Id = "Anime000001",
+            Nombre = "Anime",
+            Descripcion = "Personajes de series de anime y manga",
+            CreatedAt = DateTime.UtcNow
+        });
+        _db.Funkos.Add(new FunkoApiV._2.Models.Funko {
+            Name = "Kirito",
+            Precio = 15.99m,
+            Stock = 10,
+            Imagen = "/uploads/funkos/placeholder.png",
+            CategoriaId = "Anime000001",
+            ProveedorId = ProveedorId,
+            CreatedAt = DateTime.UtcNow
+        });
+        await _db.SaveChangesAsync();
         _service = _sp.GetRequiredService<IFunkoService>();
     }
 
     [TearDown]
     public async Task TearDown() {
-        await _db.DisposeAsync();
-        await _sp.DisposeAsync();
+        if (_db is not null)
+            await _db.DisposeAsync();
+        if (_sp is not null)
+            await _sp.DisposeAsync();
     }
 
     [OneTimeTearDown]
-    public async Task OneTimeTearDown() => await _postgres.DisposeAsync();
+    public async Task OneTimeTearDown() {
+        if (_postgres is not null)
+            await _postgres.DisposeAsync();
+    }
 
     [Test]
     public async Task CreateAsync_ConDatosValidos_CreaYDevuelveDto() {

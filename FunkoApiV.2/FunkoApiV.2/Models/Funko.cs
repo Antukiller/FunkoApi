@@ -6,7 +6,7 @@ namespace FunkoApiV._2.Models;
 public record Funko {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int Id { get; set; }
+    public long Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public decimal Precio { get; set; }
     public int Stock { get; set; }

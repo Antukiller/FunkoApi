@@ -1,0 +1,30 @@
+meta {
+  name: Actualizar categoria inexistente (404)
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{baseUrl}}/api/categorias/NoExiste001
+  body: json
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "nombre": "No existe",
+    "descripcion": "Intento de actualizar categoria inexistente"
+  }
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("cuerpo tiene mensaje", function() {
+    expect(res.body.message).to.be.a("string");
+  });
+}

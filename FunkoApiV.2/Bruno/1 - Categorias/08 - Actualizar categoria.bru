@@ -1,0 +1,39 @@
+meta {
+  name: Actualizar categoria creada
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/api/categorias/{{categoriaIdCreada}}
+  body: json
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "nombre": "Categoria Bruno Actualizada",
+    "descripcion": "Descripcion actualizada por Bruno"
+  }
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setEnvVar("categoriaIdActualizada", res.body.id);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("nombre actualizado", function() {
+    expect(res.body.nombre).to.equal("Categoria Bruno Actualizada");
+  });
+  test("descripcion actualizada", function() {
+    expect(res.body.descripcion).to.equal("Descripcion actualizada por Bruno");
+  });
+}

@@ -4,6 +4,7 @@ using FunkoApiV._2.Error;
 using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Models;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Bson;
 namespace FunkoApiV._2.Repository;
 
 public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorRepository> log) : IProveedorRepository, IScopedService {
@@ -14,6 +15,10 @@ public class ProveedorRepository(AppDbContextMongoDb context, ILogger<ProveedorR
 
     public async Task<Result<Proveedor, DomainError>> GetById(string id) {
         log.LogDebug("Obteniendo proveedor con id: {Id} ", id);
+        if (!ObjectId.TryParse(id, out _))
+            return Result.Failure<Proveedor, DomainError>(
+                new ValidationError("El id del proveedor no tiene un formato válido"));
+
         var funko = await context.Proveedor.FirstOrDefaultAsync(p => p.Id.ToString() == id && !p.IsDeleted);
         return funko is not null 
             ? Result.Success<Proveedor, DomainError>(funko)

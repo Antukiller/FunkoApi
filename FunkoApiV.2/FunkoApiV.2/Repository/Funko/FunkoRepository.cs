@@ -9,6 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace FunkoApiV._2.Repository;
 
 public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedService {
+    public async Task<IEnumerable<Funko>> GetAllAsync() {
+        return await context.Funkos
+            .Include(f => f.Categoria)
+            .OrderBy(f => f.Name)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     public async Task<(IReadOnlyList<Funko> Items, int Total)> GetPagedAsync(FunkoFilterRequest filter) {
         IQueryable<Funko> query = context.Funkos.AsNoTracking();
 
@@ -44,7 +52,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         return (items, total);
     }
 
-    public async Task<Result<Funko, DomainError>> GetByIdAsync(int id) {
+    public async Task<Result<Funko, DomainError>> GetByIdAsync(long id) {
         var funko = await context.Funkos
             .AsNoTracking()
             .Include(f => f.Categoria)
@@ -66,7 +74,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         return Result.Success<Funko, DomainError>(nuevo);
     }
 
-    public async Task<Result<Funko, DomainError>> UpdateAsync(int id, Funko funko) {
+    public async Task<Result<Funko, DomainError>> UpdateAsync(long id, Funko funko) {
         var existente = await context.Funkos.FirstOrDefaultAsync(f => f.Id == id);
         if (existente is null)
             return Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
@@ -83,7 +91,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         return Result.Success<Funko, DomainError>(existente);
     }
 
-    public async Task<Result<Funko, DomainError>> SetImagenAsync(int id, string imagen) {
+    public async Task<Result<Funko, DomainError>> SetImagenAsync(long id, string imagen) {
         var existente = await context.Funkos.FirstOrDefaultAsync(f => f.Id == id);
         if (existente is null)
             return Result.Failure<Funko, DomainError>(NotFound.FromId(id.ToString(), "Funko"));
@@ -95,7 +103,7 @@ public class FunkoRepository(AppDbContext context) : IFunkoRepository, IScopedSe
         return Result.Success<Funko, DomainError>(existente);
     }
 
-    public async Task<Result<bool, DomainError>> DeleteAsync(int id) {
+    public async Task<Result<bool, DomainError>> DeleteAsync(long id) {
         var funko = await context.Funkos.FirstOrDefaultAsync(f => f.Id == id);
         if (funko is null)
             return Result.Failure<bool, DomainError>(NotFound.FromId(id.ToString(), "Funko"));

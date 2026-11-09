@@ -1,0 +1,23 @@
+meta {
+  name: Obtener proveedor inexistente (404)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/Proveedor/000000000000000000000000
+  body: none
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+  test("cuerpo tiene mensaje", function() {
+    expect(res.body.message).to.be.a("string");
+  });
+}

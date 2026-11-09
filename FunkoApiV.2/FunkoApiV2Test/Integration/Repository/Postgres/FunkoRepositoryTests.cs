@@ -11,8 +11,16 @@ public class FunkoRepositoryTests : PostgresBaseTest {
     private FunkoRepository _repository = null!;
 
     [SetUp]
-    public void SetUpRepository() {
+    public async Task SetUpRepository() {
         _repository = new FunkoRepository(Context);
+        var fecha = DateTime.UtcNow;
+        Context.Funkos.AddRange(
+            NuevoFunko("Anime000001") with { Name = "Kirito", Precio = 15.99m, Stock = 10, CreatedAt = fecha },
+            NuevoFunko("Anime000001") with { Name = "Hinata Shoyo", Precio = 14.50m, Stock = 8, CreatedAt = fecha },
+            NuevoFunko("Videojuego1") with { Name = "Master Chief", Precio = 19.99m, Stock = 5, CreatedAt = fecha },
+            NuevoFunko("Videojuego1") with { Name = "Geralt de Rivia", Precio = 17.50m, Stock = 12, CreatedAt = fecha },
+            NuevoFunko("Peliculas01") with { Name = "Darth Vader", Precio = 21.00m, Stock = 3, CreatedAt = fecha });
+        await Context.SaveChangesAsync();
     }
 
     [Test]
