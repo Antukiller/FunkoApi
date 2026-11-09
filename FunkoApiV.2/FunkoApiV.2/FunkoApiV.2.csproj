@@ -14,6 +14,7 @@
         <PackageReference Include="GreenDonut" Version="16.7.3" />
         <PackageReference Include="HotChocolate.AspNetCore" Version="16.7.3" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="16.7.3" />
+        <PackageReference Include="HotChocolate.Data" Version="16.7.3" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />

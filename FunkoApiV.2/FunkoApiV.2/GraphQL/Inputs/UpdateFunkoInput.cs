@@ -15,7 +15,7 @@ public record UpdateFunkoInput {
     public int Stock { get; set; }
     
     [Required(ErrorMessage = "La categoría es obligatorio")]
-    public long CategoriaId { get; set; }
+    public string CategoriaId { get; set; }
     
     public string? Imagen { get; set; }
 }
