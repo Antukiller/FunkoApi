@@ -60,8 +60,8 @@ public class FunkoServiceTests {
     }
 
     [Test]
-    public async Task Add_ConImagenQueNoEsRutaRelativa_DevuelveValidationError() {
-        var request = CreateRequest() with { Imagen = "https://ejemplo.com/funko.png" };
+    public async Task Add_ConImagenQueNoEsUrlHttpNiRutaLocal_DevuelveValidationError() {
+        var request = CreateRequest() with { Imagen = "file:///C:/funko.png" };
         var resultado = await _service.Add(request);
         resultado.IsFailure.Should().BeTrue();
         resultado.Error.Should().BeOfType<ValidationError>();

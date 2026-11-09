@@ -1,4 +1,5 @@
 using FunkoApiV._2.Dto;
+using FunkoApiV._2.GraphQL.Events;
 using FunkoApiV._2.GraphQL.Inputs;
 using FunkoApiV._2.Service;
 using HotChocolate;
@@ -25,9 +26,17 @@ public class FunkoMutation {
         };
         
         var result = await service.Add(dto);
-        if (result.IsFailure) return null;
+        if (result.IsFailure) throw new GraphQLException(result.Error.Message);
         
-        _ = eventSender.SendAsync("FunkoCreado", result.Value);
+        _ = eventSender.SendAsync("onFunkoCreado", new FunkoCreadoEvent {
+            FunkoId = result.Value.Id,
+            Name = result.Value.Name,
+            Precio = result.Value.Precio,
+            Stock = result.Value.Stock,
+            CategoriaId = result.Value.CategoriaId,
+            ProveedorId = result.Value.ProveedorId,
+            CreatedAt = result.Value.CreatedAt
+        });
         return result.Value;
         
         }
@@ -45,12 +54,20 @@ public class FunkoMutation {
             Stock = input.Stock,
             Imagen = input.Imagen,
             CategoriaId = input.CategoriaId,
+            ProveedorId = input.ProveedorId
         };
         
         var result = await service.Update(id, dto);
-        if (result.IsFailure) return null;
+        if (result.IsFailure) throw new GraphQLException(result.Error.Message);
         
-        _ = eventSender.SendAsync("FunkoActualizado", result.Value);
+        _ = eventSender.SendAsync("onFunkoActualizado", new FunkoActualizadoEvent {
+            FunkoId = result.Value.Id,
+            Name = result.Value.Name,
+            Precio = result.Value.Precio,
+            Stock = result.Value.Stock,
+            CategoriaId = result.Value.CategoriaId,
+            UpdatedAt = result.Value.UpdatedAt ?? DateTime.UtcNow
+        });
         return result.Value;
         
     }
@@ -64,7 +81,10 @@ public class FunkoMutation {
     
     var result = await service.Delete(id);
     if (result.IsSuccess) {
-        _ = eventSender.SendAsync("FunkoEliminado", id);
+        _ = eventSender.SendAsync("onFunkoEliminado", new FunkoEliminadoEvent {
+            FunkoId = id,
+            DeletedAt = DateTime.UtcNow
+        });
     }
     return result.IsSuccess;
         

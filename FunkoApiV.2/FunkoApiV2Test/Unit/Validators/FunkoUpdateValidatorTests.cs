@@ -31,13 +31,12 @@ public class FunkoUpdateValidatorTests {
     }
 
     [Test]
-    public async Task Validate_ConImagenRelativa_TieneError() {
+    public async Task Validate_ConImagenRelativa_EsValido() {
         var resultado = await _validator.ValidateAsync(Valido() with {
             Imagen = "/uploads/funkos/funko.png"
         });
 
-        resultado.IsValid.Should().BeFalse();
-        resultado.Errors.Should().Contain(e => e.PropertyName == "Imagen");
+        resultado.IsValid.Should().BeTrue();
     }
 
     [Test]

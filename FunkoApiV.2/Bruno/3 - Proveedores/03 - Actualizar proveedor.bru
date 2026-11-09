@@ -1,0 +1,33 @@
+meta {
+  name: Actualizar proveedor (MongoDB)
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/Proveedor/{{proveedorIdCreado}}
+  body: json
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "nombre": "Proveedor Bruno Actualizado",
+    "direccion": "Calle Bruno Actualizada 2"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("nombre actualizado", function() {
+    expect(res.body.nombre).to.equal("Proveedor Bruno Actualizado");
+  });
+  test("direccion actualizada", function() {
+    expect(res.body.direccion).to.equal("Calle Bruno Actualizada 2");
+  });
+}

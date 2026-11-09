@@ -65,7 +65,7 @@ public record FunkoUpdateRequest {
     [Range(0, int.MaxValue, ErrorMessage = "El stock no puede ser negativo")]
     public int Stock { get; init; }
 
-    [MaxLength(500, ErrorMessage = "La URL de la imagen no puede superar 500 caracteres")]
+    [MaxLength(255, ErrorMessage = "La imagen no puede superar los 255 caracteres")]
     public string? Imagen { get; init; }
 
     [Required(ErrorMessage = "El ID de la categoría es obligatorio")]

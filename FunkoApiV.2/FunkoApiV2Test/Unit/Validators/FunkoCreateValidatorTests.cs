@@ -49,8 +49,13 @@ public class FunkoCreateValidatorTests {
         r.IsValid.Should().BeFalse();
         r.Errors.Should().Contain(e => e.PropertyName == "Stock");
     }
-    [Test] public async Task Validate_ConImagenQueNoEsRutaRelativa_TieneError() {
+    [Test] public async Task Validate_ConImagenUrlHttp_EsValido() {
         var r = await _validator.ValidateAsync(Valido() with { Imagen = "https://x.com/a.png" });
+        r.IsValid.Should().BeTrue();
+    }
+
+    [Test] public async Task Validate_ConImagenUrlNoHttp_TieneError() {
+        var r = await _validator.ValidateAsync(Valido() with { Imagen = "file:///C:/funko.png" });
         r.IsValid.Should().BeFalse();
         r.Errors.Should().Contain(e => e.PropertyName == "Imagen");
     }
@@ -63,7 +68,7 @@ public class FunkoCreateValidatorTests {
             Stock = -1,
             CategoriaId = "Anime",
             ProveedorId = "123",
-            Imagen = "https://ejemplo.com/funko.png"
+            Imagen = "file:///C:/funko.png"
         });
 
         r.IsValid.Should().BeFalse();
