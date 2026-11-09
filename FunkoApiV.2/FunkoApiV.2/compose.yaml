@@ -29,6 +29,16 @@
       - mongo_data:/data/db
     networks:
       - funko_net
+  cassandra:
+    image: cassandra:latest
+    container_name: funkoapi_cassandra
+    restart: always
+    ports:
+      - "9043:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=FunkoCluster
+    networks:
+      - funko_net
   # Cache Redis
   redis:
     image: redis:latest
@@ -46,18 +56,23 @@
       context: .
       dockerfile: Dockerfile
     container_name: funkoapi_backend
+    restart: always
     ports:
       - "5197:8080"
     environment:
       - ConnectionStrings__Postgre=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=redis:6379
       - ConnectionStrings__Mongo=mongodb://mongo_db:27017
+      - Cassandra__Hosts__0=cassandra
+      - Cassandra__Port=9042
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_started
       mongo_db:
+        condition: service_started
+      cassandra:
         condition: service_started
     networks:
       - funko_net

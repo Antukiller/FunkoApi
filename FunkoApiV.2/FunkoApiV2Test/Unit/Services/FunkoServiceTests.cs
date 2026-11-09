@@ -5,6 +5,7 @@ using FunkoApiV._2.Dto.Common;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Models;
 using FunkoApiV._2.Repository;
+using FunkoApiV._2.Repository.Cassandra;
 using FunkoApiV._2.Service;
 using FunkoApiV._2.Storage;
 using FunkoApiV._2.Validator;
@@ -23,6 +24,7 @@ public class FunkoServiceTests {
     private Mock<IFunkoRepository> _repo = null!;
     private Mock<IProveedorRepository> _repoProveedor = null!;
     private Mock<ICategoriaRepository> _repoCategoria = null!;
+    private Mock<ICassandraRepository> _repoCassandra = null!;
     private Mock<IStorageService> _storage = null!;
     private FunkoService _service = null!;
 
@@ -38,6 +40,7 @@ public class FunkoServiceTests {
         _repo = new Mock<IFunkoRepository>();
         _repoProveedor = new Mock<IProveedorRepository>();
         _repoCategoria = new Mock<ICategoriaRepository>();
+        _repoCassandra = new Mock<ICassandraRepository>();
         _storage = new Mock<IStorageService>();
 
         _repoCategoria.Setup(x => x.GetById("Anime000001"))
@@ -53,6 +56,7 @@ public class FunkoServiceTests {
             _repo.Object,
             _repoProveedor.Object,
             _repoCategoria.Object,
+            _repoCassandra.Object, 
             NullLogger<FunkoService>.Instance,
             new FunkoCreateValidator(),
             new FunkoUpdateValidator(),
