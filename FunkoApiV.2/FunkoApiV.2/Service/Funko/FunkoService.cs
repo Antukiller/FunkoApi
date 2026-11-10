@@ -5,9 +5,12 @@ using FunkoApiV._2.Dto.Common;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Mapper;
+using FunkoApiV._2.Models;
+using FunkoApiV._2.Realtime;
 using FunkoApiV._2.Repository;
 using FunkoApiV._2.Repository.Cassandra;
 using FunkoApiV._2.Storage;
+using Microsoft.AspNetCore.SignalR;
 using FunkoApiV._2.Validator;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,8 +25,9 @@ public class FunkoService(
     ILogger<FunkoService> log,
     IValidator<FunkoCreateRequest> createValidation,
     IValidator<FunkoUpdateRequest> updateValidation,
-    IStorageService storage
-) : IFunkoService, IScopedService {
+    IStorageService storage,
+    IHubContext<FunkosHub> hubContext
+    ) : IFunkoService, IScopedService {
 
     private readonly ICassandraRepository? _cassandraRepo = cassandraRepo;
     private readonly ILogger<FunkoService> _log = log ?? NullLogger<FunkoService>.Instance;
@@ -90,6 +94,9 @@ public class FunkoService(
                 f.CategoriaId, categoria.Value.Nombre,
                 f.ProveedorId, proveedor.Value.Nombre);
         }
+
+        var funko = creado.Value;
+        await NotificarFunkoCreado(funko);
         return creado.Map(f => f.ToDto());
     }
 
@@ -174,6 +181,27 @@ public class FunkoService(
         }
 
         return actualizado.Map(f => f.ToDto());
+    }
+
+    private async Task NotificarFunkoCreado(Funko funko) {
+        try {
+            var notificacion = new {
+                FunkoId = funko.Id,
+                Nombre = funko.Name,
+                Precio = funko.Precio,
+                Stock = funko.Stock,
+                Imagen = funko.Imagen,
+                CategoriaId = funko.CategoriaId,
+                ProveedorId = funko.ProveedorId
+            };
+            await hubContext.Clients
+                .Group("admins")
+                .SendAsync("FunkoCreado", notificacion);
+            log.LogInformation("Notificacion: Funko creado procediendo a enviar a admins");
+
+        } catch (Exception e) {
+            log.LogError(e, "Error: No se pudo enviar la notificacion");  
+        }
     }
     
 }

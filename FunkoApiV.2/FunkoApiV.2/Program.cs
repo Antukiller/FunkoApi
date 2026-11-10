@@ -7,6 +7,7 @@ using FunkoApiV._2.Converters;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
 using FunkoApiV._2.Infrastructure.Cassandra;
+using FunkoApiV._2.Realtime;
 using FunkoApiV._2.Seeders;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
@@ -59,6 +60,9 @@ public class Program {
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddGraphQLConfig(builder.Environment);
 
+        builder.Services.AddOpenApi();
+        builder.Services.AddRealtimeSignalR();
+        builder.Services.AddCustomCors();
         builder.Services.AddSwaggerGen(options => {
             options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo {
                 Title = "Funko API",
@@ -177,12 +181,14 @@ public class Program {
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseCustomCors();
         app.UseCors();
         app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseWebSockets();
         app.MapControllers();
+        app.MapHub<FunkosHub>("/hubs/funkos").RequireAuthorization();
         app.MapGraphQLEndpoints();
 
         await app.RunAsync();
