@@ -4,6 +4,7 @@ using FunkoApiV._2.GraphQL.Queries;
 using FunkoApiV._2.GraphQL.Resolvers;
 using FunkoApiV._2.GraphQL.Subscriptions;
 using FunkoApiV._2.GraphQL.Types;
+using HotChocolate.AspNetCore;
 using HotChocolate.Execution.Configuration;
 
 namespace FunkoApiV._2.Infrastructure;
@@ -35,7 +36,8 @@ public static class GraphQLConfig {
     }
 
     public static void MapGraphQLEndpoints(this WebApplication app) {
-        app.MapGraphQL();
+        app.MapGraphQL().WithOptions(options =>
+            options.Tool.Enable = app.Environment.IsDevelopment());
         app.MapGraphQLWebSocket();
     }
 }

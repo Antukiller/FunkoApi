@@ -1,4 +1,5 @@
 using FluentValidation;
+using FunkoApiV._2.Dto.Common;
 using FunkoApiMongo.Cache;
 using FunkoApiMongo.Config;
 using FunkoApiV._2.Config;
@@ -7,6 +8,9 @@ using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
 using FunkoApiV._2.Infrastructure.Cassandra;
 using FunkoApiV._2.Seeders;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.EntityFrameworkCore.Extensions;
 using Serilog;
@@ -33,12 +37,75 @@ public class Program {
             .AddJsonOptions(options => {
                 options.JsonSerializerOptions.Converters.Add(new ObjectIdJsonConverter());
             });
+        builder.Services.Configure<ApiBehaviorOptions>(options => {
+            options.InvalidModelStateResponseFactory = context => {
+                var errors = context.ModelState
+                    .Where(entry => entry.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        entry => entry.Key,
+                        entry => entry.Value!.Errors
+                            .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
+                                ? "El valor proporcionado no es válido."
+                                : error.ErrorMessage)
+                            .ToArray());
+                return new BadRequestObjectResult(new ApiErrorResponse {
+                    Message = "La solicitud contiene errores de validación.",
+                    Errors = errors
+                });
+            };
+        });
         
         builder.Services.AddIdentityConfiguration(builder.Configuration);
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddGraphQLConfig(builder.Environment);
 
-        builder.Services.AddOpenApi();
+        builder.Services.AddSwaggerGen(options => {
+            options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo {
+                Title = "Funko API",
+                Version = "v1",
+                Description = "API REST para autenticación, Funkos, categorías, proveedores y consultas de Cassandra."
+            });
+            var xmlFile = $"{typeof(Program).Assembly.GetName().Name}.xml";
+            options.IncludeXmlComments(System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile));
+            options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme {
+                Name = "Authorization",
+                Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = Microsoft.OpenApi.ParameterLocation.Header,
+                Description = "Introduce el token JWT sin el prefijo Bearer."
+            });
+            options.OperationFilter<AuthorizeOperationFilter>();
+            options.OperationFilter<ApiResponsesOperationFilter>();
+        });
+        builder.Services.AddCors(options => options.AddDefaultPolicy(policy => {
+            var allowedOrigins = builder.Configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>() ?? [];
+            if (allowedOrigins.Length > 0)
+                policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+        }));
+
+        var permitLimit = Math.Max(1, builder.Configuration.GetValue("RateLimiting:PermitLimit", 120));
+        var windowSeconds = Math.Max(1, builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60));
+        builder.Services.AddRateLimiter(options => {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions {
+                        PermitLimit = permitLimit,
+                        Window = TimeSpan.FromSeconds(windowSeconds),
+                        QueueLimit = 0,
+                        AutoReplenishment = true
+                    }));
+            options.OnRejected = async (context, cancellationToken) => {
+                context.HttpContext.Response.Headers["Retry-After"] = windowSeconds.ToString();
+                await context.HttpContext.Response.WriteAsJsonAsync(
+                    new { message = "Se ha superado el límite de peticiones. Inténtalo más tarde." },
+                    cancellationToken);
+            };
+        });
 
         // 4. EF Core: Postgres (Funko/Categoria) + Mongo (Proveedor)
         builder.Services.AddDbContext<AppDbContext>(options =>
@@ -64,11 +131,13 @@ public class Program {
 
         var app = builder.Build();
 
-        // 8. OpenAPI siempre (ya no hay dos entornos)
-        app.MapOpenApi();
+        if (app.Environment.IsDevelopment()) {
+            app.UseSwagger();
+            app.UseSwaggerUI(options =>
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "Funko API v1"));
+        }
 
-        // 9. Esquema + seed de Postgres
-        // 9. Esquema + seed de Postgres, Mongo e Identity
+        // 9. Inicializar esquemas y, solo en desarrollo, cargar datos de ejemplo.
         using (var scope = app.Services.CreateScope()) {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var dbMongo = scope.ServiceProvider.GetRequiredService<AppDbContextMongoDb>();
@@ -81,23 +150,31 @@ public class Program {
             await db.Database.EnsureCreatedAsync();
             await PostgresSchemaInitializer.EnsureSchemaAsync(db);
 
-            // Datos de negocio (categorías, proveedores, funkos)
-            await DbSeeder.SeedAsync(db, dbMongo, logger);
-            // Datos de negocio (categorías, proveedores, funkos)
-            await DbSeeder.SeedAsync(db, dbMongo, logger);
+            if (app.Environment.IsDevelopment()) {
+                await DbSeeder.SeedAsync(db, dbMongo, logger);
+                await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
+                await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
+            }
+        }
 
-            // Read model de Cassandra (se reconstruye desde Postgres + Mongo)
-            await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
-
-            // Roles y usuarios de Identity (contraseña hasheada correctamente)
-            await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
-
-            // Roles y usuarios de Identity (contraseña hasheada correctamente)
-            await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
+        if (!app.Environment.IsDevelopment()) {
+            app.Use(async (context, next) => {
+                context.Response.OnStarting(() => {
+                    context.Response.Headers["Content-Security-Policy"] =
+                        "default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+                    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                    context.Response.Headers["X-Frame-Options"] = "DENY";
+                    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+                    return Task.CompletedTask;
+                });
+                await next();
+            });
         }
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseCors();
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseWebSockets();

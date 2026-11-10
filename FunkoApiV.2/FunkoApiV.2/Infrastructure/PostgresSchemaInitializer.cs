@@ -110,5 +110,32 @@ public static class PostgresSchemaInitializer {
                 ON "AspNetUserRoles" ("RoleId");
             CREATE INDEX IF NOT EXISTS "IX_funko_CategoriaId"
                 ON funko ("CategoriaId");
+
+            CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+            CREATE INDEX IF NOT EXISTS "IX_funko_ProveedorId_Activos"
+                ON funko ("ProveedorId")
+                WHERE "IsDeleted" = false;
+            CREATE INDEX IF NOT EXISTS "IX_funko_ProveedorId_CategoriaId_Activos"
+                ON funko ("ProveedorId", "CategoriaId")
+                WHERE "IsDeleted" = false;
+            CREATE INDEX IF NOT EXISTS "IX_funko_Precio_Activos"
+                ON funko ("Precio")
+                WHERE "IsDeleted" = false;
+            CREATE INDEX IF NOT EXISTS "IX_funko_Stock_Activos"
+                ON funko ("Stock")
+                WHERE "IsDeleted" = false;
+            CREATE INDEX IF NOT EXISTS "IX_funko_Name_Activos"
+                ON funko ("Name")
+                WHERE "IsDeleted" = false;
+            CREATE INDEX IF NOT EXISTS "IX_funko_CreatedAt_Activos"
+                ON funko ("CreatedAt")
+                WHERE "IsDeleted" = false;
+            CREATE INDEX IF NOT EXISTS "IX_funko_Name_Trigram_Activos"
+                ON funko USING gin ("Name" gin_trgm_ops)
+                WHERE "IsDeleted" = false;
+            CREATE INDEX IF NOT EXISTS "IX_categoria_Nombre_Trigram_Activas"
+                ON categoria USING gin ("Nombre" gin_trgm_ops)
+                WHERE "IsDeleted" = false;
             """);
 }

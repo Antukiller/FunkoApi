@@ -32,7 +32,7 @@ public class CassandraRepository(ISession session): ICassandraRepository, IScope
         return funkos.ToList();
     }
 
-    public async Task SincronizarFunkoAsync(int funkoId, string nombre, int stock, decimal precio, string categoriaId,
+    public async Task SincronizarFunkoAsync(long funkoId, string nombre, int stock, decimal precio, string categoriaId,
         string categoriaNombre, string proveedorId, string proveedorNombre) {
         await session.ExecuteAsync(new SimpleStatement(
             "INSERT INTO funkos_por_categorias " +
@@ -53,7 +53,7 @@ public class CassandraRepository(ISession session): ICassandraRepository, IScope
             proveedorId, categoriaId, funkoId, nombre, proveedorNombre, categoriaNombre));   
     }
 
-    public async Task EliminarFunkoAsync(string categoriaId, string proveedorId, int funkoId) {
+    public async Task EliminarFunkoAsync(string categoriaId, string proveedorId, long funkoId) {
         await session.ExecuteAsync(new SimpleStatement(
             "DELETE FROM funkos_por_categorias WHERE categoria_id = ? AND funkos_id = ?",
             categoriaId, funkoId));
