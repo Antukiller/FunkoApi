@@ -10,6 +10,7 @@
 | Moq | 4.21.0 | Mocks |
 | FluentAssertions | 7.2.2 | Aserciones |
 | Testcontainers.PostgreSql | 4.15.0 | Integración con BD real |
+| Testcontainers.Cassandra | 4.16.0 | Integración con Cassandra real |
 | coverlet.collector | 10.0.1 | Cobertura de código |
 
 ---
@@ -30,6 +31,7 @@ FunkoApiV2Test/
 └── Integration/
     ├── Repository/
     │   ├── Postgres/    → FunkoRepositoryTests, CategoriaRepositoryTests
+    │   ├── Cassandra/   → CassandraRepositoryTests
     │   └── Mongo/       → ProveedorRepositoryBaseTest
     └── Services/
         ├── FunkoServiceIntegrationTests.cs
@@ -135,3 +137,16 @@ private readonly PostgreSqlContainer _postgres =
 [OneTimeSetUp]
 public async Task ClassSetUp() => await _postgres.StartAsync();
 ```
+
+Las pruebas Cassandra usan un contenedor real y el esquema compartido por
+`CassandraSchemaExtensions.InitializeSchemaAsync`. El contenedor se inicia solo
+para esa clase:
+
+```powershell
+dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj `
+  --filter "Category=Integration&FullyQualifiedName~CassandraRepositoryTests"
+```
+
+El esquema declara `funkos_id` como `bigint` para corresponder con `long` en C#.
+`CREATE TABLE IF NOT EXISTS` no migra tablas existentes: si ya se creó alguna con
+`int`, hay que migrarla o recrearla antes de ejecutar la API con el esquema nuevo.
