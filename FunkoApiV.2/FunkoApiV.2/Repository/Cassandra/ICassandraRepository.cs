@@ -9,9 +9,9 @@ public interface ICassandraRepository {
     Task<IReadOnlyList<FunkosPorProveedor>> GetFunkosPorProveedor(string proveedorId);
     Task<IReadOnlyList<FunkoPorProveedorCategoria>> GetFunkosPorProveedorCategoria(string proveedorId, string categoriaId);
 
-    Task SincronizarFunkoAsync(int funkoId, string nombre, int stock, decimal precio,
+    Task SincronizarFunkoAsync(long funkoId, string nombre, int stock, decimal precio,
         string categoriaId, string categoriaNombre,
         string proveedorId, string proveedorNombre);
 
-    Task EliminarFunkoAsync(string categoriaId, string proveedorId, int funkoId);
+    Task EliminarFunkoAsync(string categoriaId, string proveedorId, long funkoId);
 }

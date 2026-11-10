@@ -1,0 +1,27 @@
+meta {
+  name: Obtener proveedor por id (MongoDB)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/Proveedor/{{proveedorIdCreado}}
+  body: none
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("id coincide", function() {
+    expect(res.body.id).to.equal(bru.getEnvVar("proveedorIdCreado"));
+  });
+  test("tiene nombre y direccion", function() {
+    expect(res.body.nombre).to.be.a("string");
+    expect(res.body.direccion).to.be.a("string");
+  });
+}

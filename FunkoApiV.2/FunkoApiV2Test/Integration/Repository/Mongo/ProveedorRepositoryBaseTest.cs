@@ -1,5 +1,6 @@
 ﻿using FunkoApiV._2.Entity;
 using FunkoApiV._2.Models;
+using FunkoApiV2Test.Integration;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Bson;
 using Testcontainers.MongoDb;
@@ -10,18 +11,21 @@ public abstract class ProveedorRepositoryBaseTest {
     protected static readonly ObjectId ProveedorId = ObjectId.Parse("672f1a8b3c9d4e5f6a7b8c9d");
     protected static readonly ObjectId ProveedorInexistenteId = ObjectId.Parse("672f1a8b3c9d4e5f6a7b8c9e");
 
-    private readonly MongoDbContainer MongoDb = new MongoDbBuilder()
-        .WithImage("mongo:7.0")
-        .Build();
+    private MongoDbContainer? MongoDb;
 
     protected AppDbContextMongoDb DbContext { get; private set; } = null!;
 
     [OneTimeSetUp]
     public async Task ClassSetUp() {
-        await MongoDb.StartAsync();
+        await DockerTestPrerequisite.StartContainerOrIgnoreAsync(async () => {
+            MongoDb = new MongoDbBuilder()
+                .WithImage("mongo:7.0")
+                .Build();
+            await MongoDb.StartAsync();
+        });
 
         var options = new DbContextOptionsBuilder<AppDbContextMongoDb>()
-            .UseMongoDB(MongoDb.GetConnectionString(), "test_database")
+            .UseMongoDB(MongoDb!.GetConnectionString(), "test_database")
             .Options;
 
         DbContext = new AppDbContextMongoDb(options);
@@ -29,8 +33,10 @@ public abstract class ProveedorRepositoryBaseTest {
 
     [OneTimeTearDown]
     public async Task ClassTearDown() {
-        await DbContext.DisposeAsync();
-        await MongoDb.DisposeAsync();
+        if (DbContext is not null)
+            await DbContext.DisposeAsync();
+        if (MongoDb is not null)
+            await MongoDb.DisposeAsync();
     }
 
     [SetUp]

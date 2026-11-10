@@ -1,0 +1,20 @@
+meta {
+  name: Eliminar funko inexistente (404)
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/api/funkos/99999
+  body: none
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("status 404", function() {
+    expect(res.status).to.equal(404);
+  });
+}

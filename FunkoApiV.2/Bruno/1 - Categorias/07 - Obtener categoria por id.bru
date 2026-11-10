@@ -1,0 +1,23 @@
+meta {
+  name: Obtener categoria por id
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/categorias/{{categoriaId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("id coincide", function() {
+    expect(res.body.id).to.equal(bru.getEnvVar("categoriaId"));
+  });
+  test("tiene nombre", function() {
+    expect(res.body.nombre).to.be.a("string");
+  });
+}

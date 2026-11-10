@@ -1,4 +1,6 @@
 using FunkoApiV._2.Entity;
+using FunkoApiV._2.Models;
+using FunkoApiV2Test.Integration;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 
@@ -7,8 +9,7 @@ namespace FunkoApiV2Test.Repository.Postgres;
 public abstract class PostgresBaseTest {
     private const string ProveedorId = "672f1a8b3c9d4e5f6a7b8c9d";
 
-    private readonly PostgreSqlContainer _postgres =
-        new PostgreSqlBuilder("postgres:16-alpine").Build();
+    private PostgreSqlContainer? _postgres;
 
     protected AppDbContext Context { get; private set; } = null!;
 
@@ -16,10 +17,13 @@ public abstract class PostgresBaseTest {
 
     [OneTimeSetUp]
     public async Task ClassSetUp() {
-        await _postgres.StartAsync();
+        await DockerTestPrerequisite.StartContainerOrIgnoreAsync(async () => {
+            _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
+            await _postgres.StartAsync();
+        });
 
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseNpgsql(_postgres.GetConnectionString())
+            .UseNpgsql(_postgres!.GetConnectionString())
             .Options;
 
         Context = new AppDbContext(options);
@@ -30,11 +34,33 @@ public abstract class PostgresBaseTest {
         Context.ChangeTracker.Clear();
         await Context.Database.ExecuteSqlRawAsync("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
         await Context.Database.EnsureCreatedAsync();
+        Context.Categorias.AddRange(
+            new Categoria {
+                Id = "Anime000001",
+                Nombre = "Anime",
+                Descripcion = "Personajes de series de anime y manga",
+                CreatedAt = DateTime.UtcNow
+            },
+            new Categoria {
+                Id = "Videojuego1",
+                Nombre = "Videojuegos",
+                Descripcion = "Personajes de consolas y PC",
+                CreatedAt = DateTime.UtcNow
+            },
+            new Categoria {
+                Id = "Peliculas01",
+                Nombre = "Películas",
+                Descripcion = "Cine y series de televisión",
+                CreatedAt = DateTime.UtcNow
+            });
+        await Context.SaveChangesAsync();
     }
 
     [OneTimeTearDown]
     public async Task ClassTearDown() {
-        await Context.DisposeAsync();
-        await _postgres.DisposeAsync();
+        if (Context is not null)
+            await Context.DisposeAsync();
+        if (_postgres is not null)
+            await _postgres.DisposeAsync();
     }
 }

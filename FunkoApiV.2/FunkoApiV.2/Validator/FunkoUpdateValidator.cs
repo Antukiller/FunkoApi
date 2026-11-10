@@ -27,8 +27,8 @@ public class FunkoUpdateValidator :  AbstractValidator<FunkoUpdateRequest>, ITra
             .WithMessage("El ID del proveedor debe ser un ObjectId de 24 caracteres hex");
 
         RuleFor(x => x.Imagen)
-            .MaximumLength(500)
-            .Must(uri => string.IsNullOrWhiteSpace(uri) || Uri.TryCreate(uri, UriKind.Absolute, out _))
-            .WithMessage("La imagen debe ser una URL válida");
+            .MaximumLength(255).WithMessage("La imagen no puede superar los 255 caracteres")
+            .Must(uri => string.IsNullOrWhiteSpace(uri) || FunkoImageReference.IsValid(uri))
+            .WithMessage("La imagen debe ser una URL HTTP/HTTPS o una ruta que empiece por /uploads/funkos/");
     }
 }

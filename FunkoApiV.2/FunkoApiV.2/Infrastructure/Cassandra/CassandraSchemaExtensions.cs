@@ -22,7 +22,7 @@ public static class CassandraSchemaExtensions {
         await session.ExecuteAsync(new SimpleStatement("""
                                                         CREATE TABLE IF NOT EXISTS funkos_por_categorias (
                                                        categoria_id text,
-                                                       funkos_id int,
+                                                       funkos_id bigint,
                                                        nombre text,
                                                        stock int,
                                                        precio decimal,
@@ -33,7 +33,7 @@ public static class CassandraSchemaExtensions {
         await session.ExecuteAsync(new SimpleStatement("""
                                                         CREATE TABLE IF NOT EXISTS funkos_por_proveedor (
                                                        proveedor_id text,
-                                                       funkos_id int,
+                                                       funkos_id bigint,
                                                        nombre text,
                                                        stock int,
                                                        precio decimal,
@@ -45,7 +45,7 @@ public static class CassandraSchemaExtensions {
                                                        CREATE TABLE IF NOT EXISTS funkos_por_proveedor_categoria(
                                                            proveedor_id text,
                                                            categoria_id text,
-                                                           funkos_id int,
+                                                           funkos_id bigint,
                                                            nombre text,
                                                            proveedor_nombre text,
                                                            categoria_nombre text,

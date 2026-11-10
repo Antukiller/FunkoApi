@@ -1,0 +1,23 @@
+meta {
+  name: Listar proveedores (MongoDB)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/Proveedor
+  body: none
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("respuesta es array", function() {
+    expect(res.body).to.be.an("array");
+  });
+}

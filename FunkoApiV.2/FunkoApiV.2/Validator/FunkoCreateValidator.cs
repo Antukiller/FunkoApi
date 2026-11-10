@@ -27,8 +27,8 @@ public class FunkoCreateValidator : AbstractValidator<FunkoCreateRequest>, ITran
 
         RuleFor(x => x.Imagen)
             .NotEmpty().WithMessage("La imagen es obligatoria")
-            .MaximumLength(255).WithMessage("La ruta de la imagen no puede superar los 255 caracteres")
-            .Must(p => p.StartsWith("/uploads/funkos/", StringComparison.OrdinalIgnoreCase))
-            .WithMessage("La imagen debe ser una ruta relativa que empiece por /uploads/funkos/");
+            .MaximumLength(255).WithMessage("La imagen no puede superar los 255 caracteres")
+            .Must(FunkoImageReference.IsValid)
+            .WithMessage("La imagen debe ser una URL HTTP/HTTPS o una ruta que empiece por /uploads/funkos/");
     }
 }

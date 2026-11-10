@@ -8,15 +8,15 @@ namespace FunkoApiV._2.Service;
 public interface IFunkoService {
     Task<PagedResult<FunkoResponseDto>> GetAll(FunkoFilterRequest filter);
 
-    Task<Result<FunkoResponseDto, DomainError>> GetById(int id);
+    Task<Result<FunkoResponseDto, DomainError>> GetById(long id);
 
     Task<Result<FunkoResponseDto, DomainError>> Add(FunkoCreateRequest request);
 
-    Task<Result<FunkoResponseDto, DomainError>> Update(int id, FunkoUpdateRequest request);
+    Task<Result<FunkoResponseDto, DomainError>> Update(long id, FunkoUpdateRequest request);
 
-    Task<Result<bool, DomainError>> Delete(int id);
+    Task<Result<bool, DomainError>> Delete(long id);
     
     Task<Result<string, DomainError>> UploadImagen(IFormFile file);
 
-    Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(int id, IFormFile file);
+    Task<Result<FunkoResponseDto, DomainError>> UpdateImagen(long id, IFormFile file);
 }

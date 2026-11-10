@@ -1,0 +1,20 @@
+meta {
+  name: Subir imagen sin archivo (400)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/funkos/imagen
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 400 por archivo ausente", function() {
+    expect(res.status).to.equal(400);
+  });
+  test("cuerpo tiene mensaje o ruta", function() {
+    expect(res.body).to.be.an("object");
+  });
+}
