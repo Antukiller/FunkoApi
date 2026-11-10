@@ -10,7 +10,7 @@ public class FunkosPorProveedor {
     
     [Column("funkos_id")]
     [ClusteringKey]
-    public long FunkosId { get; set; }
+    public int FunkosId { get; set; }
     
     [Column("nombre")]
     public string Nombre { get; set; }

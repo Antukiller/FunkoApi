@@ -18,11 +18,11 @@ public class FunkoService(
     IFunkoRepository repo,
     IProveedorRepository repoProveedor,
     ICategoriaRepository  repoCategoria,
-    ICassandraRepository? cassandraRepo = null,
-    ILogger<FunkoService>? log = null,
-    IValidator<FunkoCreateRequest>? createValidation = null,
-    IValidator<FunkoUpdateRequest>? updateValidation = null,
-    IStorageService? storage = null
+    ICassandraRepository cassandraRepo,
+    ILogger<FunkoService> log,
+    IValidator<FunkoCreateRequest> createValidation,
+    IValidator<FunkoUpdateRequest> updateValidation,
+    IStorageService storage
 ) : IFunkoService, IScopedService {
 
     private readonly ICassandraRepository? _cassandraRepo = cassandraRepo;
@@ -65,6 +65,13 @@ public class FunkoService(
                 new ValidationError(validation.Errors[0].ErrorMessage));
         }
         
+        var validation = await createValidation.ValidateAsync(request);
+        if (!validation.IsValid) {
+            log.LogWarning("Validación fallida al crear funko: {@Errors}", validation.Errors);
+            return Result.Failure<FunkoResponseDto, DomainError>(
+                new ValidationError(validation.Errors[0].ErrorMessage));
+        }
+        
         var categoria = await repoCategoria.GetById(request.CategoriaId);
         if (categoria.IsFailure)
             return Result.Failure<FunkoResponseDto, DomainError>(
@@ -79,11 +86,9 @@ public class FunkoService(
         var creado = await repo.CreateAsync(request.ToModel());
         if (creado.IsSuccess) {
             var f = creado.Value;
-            if (_cassandraRepo is not null) {
-                await _cassandraRepo.SincronizarFunkoAsync(f.Id, f.Name, f.Stock, f.Precio,
-                    f.CategoriaId, categoria.Value.Nombre,
-                    f.ProveedorId, proveedor.Value.Nombre);
-            }
+            await cassandraRepo.SincronizarFunkoAsync(f.Id, f.Name, f.Stock, f.Precio,
+                f.CategoriaId, categoria.Value.Nombre,
+                f.ProveedorId, proveedor.Value.Nombre);
         }
         return creado.Map(f => f.ToDto());
     }
@@ -121,24 +126,22 @@ public class FunkoService(
         var actualizado = await repo.UpdateAsync(id, request.ToModel());
         if (actualizado.IsSuccess) {
             var f = actualizado.Value;
-            if (_cassandraRepo is not null) {
-                if (catVieja != f.CategoriaId || provVieja != f.ProveedorId)
-                    await _cassandraRepo.EliminarFunkoAsync(catVieja, provVieja, id);
-                await _cassandraRepo.SincronizarFunkoAsync(f.Id, f.Name, f.Stock, f.Precio,
-                    f.CategoriaId, categoria.Value.Nombre,
-                    f.ProveedorId, proveedor.Value.Nombre);
-            }
+            if (catVieja != f.CategoriaId || provVieja != f.ProveedorId)
+                await cassandraRepo.EliminarFunkoAsync(catVieja, provVieja, id);
+            await cassandraRepo.SincronizarFunkoAsync(f.Id, f.Name, f.Stock, f.Precio,
+                f.CategoriaId, categoria.Value.Nombre,
+                f.ProveedorId, proveedor.Value.Nombre);
         }
 
         return actualizado.Map(f => f.ToDto());
     }
 
     public async Task<Result<bool, DomainError>> Delete(long id) {
-        _log.LogInformation("Eliminando funko: {@Id}", id);
+        log.LogInformation("Eliminando funko: {@Id}", id);
         var funko = await repo.GetByIdAsync(id);
         var borrado = await repo.DeleteAsync(id);
-        if (borrado.IsSuccess && funko.IsSuccess && _cassandraRepo is not null && funko.Value is not null) 
-            await _cassandraRepo.EliminarFunkoAsync(funko.Value.CategoriaId, funko.Value.ProveedorId, id);
+        if (borrado.IsSuccess && funko.IsSuccess) 
+            await cassandraRepo.EliminarFunkoAsync(funko.Value.CategoriaId, funko.Value.ProveedorId, id);
         return borrado;
     }
 
