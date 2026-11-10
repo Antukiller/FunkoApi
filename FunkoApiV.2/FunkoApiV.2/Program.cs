@@ -6,6 +6,7 @@ using FunkoApiV._2.Converters;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Infrastructure;
 using FunkoApiV._2.Infrastructure.Cassandra;
+using FunkoApiV._2.Realtime;
 using FunkoApiV._2.Seeders;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.EntityFrameworkCore.Extensions;
@@ -38,6 +39,8 @@ public class Program {
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
         builder.Services.AddOpenApi();
+        builder.Services.AddRealtimeSignalR();
+        builder.Services.AddCustomCors();
 
         // 4. EF Core: Postgres (Funko/Categoria) + Mongo (Proveedor)
         builder.Services.AddDbContext<AppDbContext>(options =>
@@ -96,10 +99,11 @@ public class Program {
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
+        app.UseCustomCors();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
-
+        app.MapHub<FunkosHub>("/hubs/funkos").RequireAuthorization();
         await app.RunAsync();
     }
 }

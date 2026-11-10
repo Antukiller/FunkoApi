@@ -80,6 +80,17 @@ public static class IdentityConfig
                     Encoding.UTF8.GetBytes(jwtSettings.Key)),
                 ClockSkew = TimeSpan.Zero
             };
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/hubs"))
+                    {
+                        context.Token = context.Request.Query["access_token"];
+                    }
+                    return Task.CompletedTask;
+                }
+            };
         });
 
         // ── Authorization Policies ───────────────────────────────────────────
