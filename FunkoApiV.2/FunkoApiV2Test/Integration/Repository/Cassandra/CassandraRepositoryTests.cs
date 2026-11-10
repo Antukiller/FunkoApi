@@ -91,7 +91,7 @@ public class CassandraRepositoryTests {
         porProveedor.Should().ContainSingle()
             .Which.Should().BeEquivalentTo(new FunkosPorProveedor {
                 ProveedorId = _proveedorId,
-                FunkosId = _funkoId,
+                FunkosId = Random.Shared.Next(1, 100000),
                 Nombre = nombre,
                 Stock = 8,
                 Precio = 19.99m,

@@ -4,12 +4,14 @@ using FunkoApiV._2.Dto;
 using FunkoApiV._2.Dto.Common;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Models;
+using FunkoApiV._2.Realtime;
 using FunkoApiV._2.Repository;
 using FunkoApiV._2.Repository.Cassandra;
 using FunkoApiV._2.Service;
 using FunkoApiV._2.Storage;
 using FunkoApiV._2.Validator;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using MongoDB.Bson;
@@ -26,6 +28,8 @@ public class FunkoServiceTests {
     private Mock<ICategoriaRepository> _repoCategoria = null!;
     private Mock<ICassandraRepository> _repoCassandra = null!;
     private Mock<IStorageService> _storage = null!;
+    private Mock<IHubContext<FunkosHub>> _hubContext = null!;
+    
     private FunkoService _service = null!;
 
     private static Proveedor ProveedorSeed => new() {
@@ -41,6 +45,9 @@ public class FunkoServiceTests {
         _repoProveedor = new Mock<IProveedorRepository>();
         _repoCategoria = new Mock<ICategoriaRepository>();
         _repoCassandra = new Mock<ICassandraRepository>();
+        _hubContext = new Mock<IHubContext<FunkosHub>>();
+        var mockClients = new Mock<IHubClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
         _storage = new Mock<IStorageService>();
 
         _repoCategoria.Setup(x => x.GetById("Anime000001"))
@@ -60,7 +67,8 @@ public class FunkoServiceTests {
             NullLogger<FunkoService>.Instance,
             new FunkoCreateValidator(),
             new FunkoUpdateValidator(),
-            _storage.Object);
+            _storage.Object,
+            _hubContext.Object);
     }
 
     [Test]
