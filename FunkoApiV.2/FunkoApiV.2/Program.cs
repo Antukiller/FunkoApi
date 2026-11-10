@@ -35,9 +35,7 @@ public class Program {
 
         // 3. Controladores + OpenAPI
         builder.Services.AddControllers()
-            .AddJsonOptions(options => {
-                options.JsonSerializerOptions.Converters.Add(new ObjectIdJsonConverter());
-            });
+            .AddJsonOptions(options => { options.JsonSerializerOptions.Converters.Add(new ObjectIdJsonConverter()); });
         builder.Services.Configure<ApiBehaviorOptions>(options => {
             options.InvalidModelStateResponseFactory = context => {
                 var errors = context.ModelState
@@ -55,14 +53,14 @@ public class Program {
                 });
             };
         });
-        
+
         builder.Services.AddIdentityConfiguration(builder.Configuration);
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddGraphQLConfig(builder.Environment);
 
         builder.Services.AddOpenApi();
         builder.Services.AddRealtimeSignalR();
-        builder.Services.AddCustomCors();
+        builder.Services.AddCustomCors(builder.Configuration);
         builder.Services.AddSwaggerGen(options => {
             options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo {
                 Title = "Funko API",
@@ -82,14 +80,7 @@ public class Program {
             options.OperationFilter<AuthorizeOperationFilter>();
             options.OperationFilter<ApiResponsesOperationFilter>();
         });
-        builder.Services.AddCors(options => options.AddDefaultPolicy(policy => {
-            var allowedOrigins = builder.Configuration
-                .GetSection("Cors:AllowedOrigins")
-                .Get<string[]>() ?? [];
-            if (allowedOrigins.Length > 0)
-                policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
-        }));
-
+        
         var permitLimit = Math.Max(1, builder.Configuration.GetValue("RateLimiting:PermitLimit", 120));
         var windowSeconds = Math.Max(1, builder.Configuration.GetValue("RateLimiting:WindowSeconds", 60));
         builder.Services.AddRateLimiter(options => {
@@ -117,9 +108,9 @@ public class Program {
 
         builder.Services.AddDbContext<AppDbContextMongoDb>(options =>
             options.UseMongoDB(FunkoConfig.MongoConnection, FunkoConfig.MongoDatabase));
-        
+
         builder.Services.AddCassandra(builder.Configuration);
-        
+
 
         // 5. Caché (Redis, sin bifurcar por entorno)
         builder.Services.Configure<CacheConfig>(
@@ -165,32 +156,32 @@ public class Program {
             // Roles y usuarios de Identity (contraseña hasheada correctamente)
             await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
 
-        if (!app.Environment.IsDevelopment()) {
-            app.Use(async (context, next) => {
-                context.Response.OnStarting(() => {
-                    context.Response.Headers["Content-Security-Policy"] =
-                        "default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
-                    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-                    context.Response.Headers["X-Frame-Options"] = "DENY";
-                    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-                    return Task.CompletedTask;
+            if (!app.Environment.IsDevelopment()) {
+                app.Use(async (context, next) => {
+                    context.Response.OnStarting(() => {
+                        context.Response.Headers["Content-Security-Policy"] =
+                            "default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+                        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                        context.Response.Headers["X-Frame-Options"] = "DENY";
+                        context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+                        return Task.CompletedTask;
+                    });
+                    await next();
                 });
-                await next();
-            });
+            }
+
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+            app.UseCustomCors();
+            app.UseRateLimiter();
+            app.UseAuthentication();
+            app.UseAuthorization();
+            app.UseWebSockets();
+            app.MapControllers();
+            app.MapHub<FunkosHub>("/hubs/funkos").RequireAuthorization();
+            app.MapGraphQLEndpoints();
+
+            await app.RunAsync();
         }
-
-        app.UseHttpsRedirection();
-        app.UseStaticFiles();
-        app.UseCustomCors();
-        app.UseCors();
-        app.UseRateLimiter();
-        app.UseAuthentication();
-        app.UseAuthorization();
-        app.UseWebSockets();
-        app.MapControllers();
-        app.MapHub<FunkosHub>("/hubs/funkos").RequireAuthorization();
-        app.MapGraphQLEndpoints();
-
-        await app.RunAsync();
     }
 }

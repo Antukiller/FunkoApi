@@ -69,13 +69,6 @@ public class FunkoService(
                 new ValidationError(validation.Errors[0].ErrorMessage));
         }
         
-        var validation = await createValidation.ValidateAsync(request);
-        if (!validation.IsValid) {
-            log.LogWarning("Validación fallida al crear funko: {@Errors}", validation.Errors);
-            return Result.Failure<FunkoResponseDto, DomainError>(
-                new ValidationError(validation.Errors[0].ErrorMessage));
-        }
-        
         var categoria = await repoCategoria.GetById(request.CategoriaId);
         if (categoria.IsFailure)
             return Result.Failure<FunkoResponseDto, DomainError>(

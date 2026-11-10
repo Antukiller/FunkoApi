@@ -2,19 +2,22 @@
 
 public static class CorsConfig {
     public const string PolicyName = "FunkoCorsPolicy";
-    public static IServiceCollection AddCustomCors(this IServiceCollection services) {
+    public static IServiceCollection AddCustomCors(this IServiceCollection services, IConfiguration configuration) {
+        var configuredOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        var defaultOrigins = new[] {
+            "http://localhost:5500",
+            "http://127.0.0.1:5500",
+            "http://localhost:63342",
+            "http://localhost:5197",
+            "http://127.0.0.1:5197"
+        };
+        var allOrigins = configuredOrigins.Concat(defaultOrigins).Distinct().ToArray();
         services.AddCors(options => {
             options.AddPolicy(PolicyName, policy => {
-                policy.WithOrigins(
-                        "http://localhost:5500",
-                        "http://127.0.0.1:5500",
-                        "http://localhost:63342",
-                        "http://localhost:5197",
-                        "http://127.0.0.1:5197"
-                    )
+                policy.WithOrigins(allOrigins)
                     .AllowAnyHeader()
                     .AllowAnyMethod()
-                    .AllowCredentials();
+                    .AllowCredentials(); // Imprescindible para SignalR
             });
         });
         return services;

@@ -6,8 +6,8 @@ namespace FunkoApiV._2.Dto.Auth;
 /// <param name="Email">Dirección de correo registrada.</param>
 /// <param name="Password">Contraseña de la cuenta.</param>
 public record LoginDto(
-    [property: Required, EmailAddress] string Email,
-    [property: Required] string Password);
+    [Required, EmailAddress] string Email,
+    [Required] string Password);
 
 /// <summary>Datos necesarios para registrar una cuenta de usuario.</summary>
 /// <param name="Email">Dirección de correo válida y única.</param>
@@ -15,10 +15,10 @@ public record LoginDto(
 /// <param name="Nombre">Nombre del usuario.</param>
 /// <param name="Apellido">Apellido del usuario.</param>
 public record SignupDto(
-    [property: Required, EmailAddress] string Email,
-    [property: Required, MinLength(8), RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$")] string Password,
-    [property: Required, MinLength(1)] string Nombre,
-    [property: Required, MinLength(1)] string Apellido);
+    [Required, EmailAddress] string Email,
+    [Required, MinLength(8), RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$")] string Password,
+    [Required, MinLength(1)] string Nombre,
+    [Required, MinLength(1)] string Apellido);
 
 /// <summary>Token JWT emitido tras iniciar sesión o registrarse.</summary>
 /// <param name="Token">Token de acceso Bearer.</param>
