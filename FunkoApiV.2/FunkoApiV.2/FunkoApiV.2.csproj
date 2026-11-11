@@ -18,6 +18,7 @@
         <PackageReference Include="HotChocolate.AspNetCore" Version="16.7.3" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" Version="16.7.3" />
         <PackageReference Include="HotChocolate.Data" Version="16.7.3" />
+        <PackageReference Include="MailKit" Version="4.10.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
@@ -33,6 +34,7 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.14" />
+        <PackageReference Include="MimeKit" Version="4.10.0" />
         <PackageReference Include="MongoDB.Driver" Version="3.13.0" />
         <PackageReference Include="MongoDB.EntityFrameworkCore" Version="10.0.4" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
