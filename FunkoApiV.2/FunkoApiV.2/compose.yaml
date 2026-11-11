@@ -51,6 +51,15 @@
       - redis_data:/data
     networks:
       - funko_net
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: funkoapi_mailpit
+    restart: always
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - funko_net
 
   # API .NET (FunkoApi V.2)
   backend:
@@ -62,12 +71,17 @@
     ports:
       - "5197:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__Postgre=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
       - ConnectionStrings__Redis=redis:6379
       - ConnectionStrings__Mongo=mongodb://mongo_db:27017
       - Cassandra__Hosts__0=cassandra
       - Cassandra__Port=9042
+      - Smtp__Host=smtp.gmail.com
+      - Smtp__Port=587
+      - Smtp__Username=oms04081974@gmail.com
+      - Smtp__Password=ersvficvfajtehbc        
+      - Smtp__From=oms04081974@gmail.com
     depends_on:
       db:
         condition: service_healthy
@@ -76,6 +90,8 @@
       mongo_db:
         condition: service_started
       cassandra:
+        condition: service_started
+      mailpit:
         condition: service_started
     networks:
       - funko_net

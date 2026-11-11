@@ -8,7 +8,9 @@ using FunkoApiV._2.Entity;
 using FunkoApiV._2.Error;
 using FunkoApiV._2.Infrastructure.Interfaces;
 using FunkoApiV._2.Models;
+using FunkoApiV._2.Service.Email;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -19,6 +21,7 @@ public class AuthService(
     AppDbContext context, 
     UserManager<AppUser> userManager, 
     SignInManager<AppUser> signUser, 
+    IEmailMessage emailService,
     IOptions<JwtSettings> options) : IAuthService, IScopedService {
     
     public async Task<Result<AuthResponseDto, DomainError>> Login(LoginDto loginDto) {
@@ -69,6 +72,17 @@ public class AuthService(
 
         var role = "USER";
         var token = GenerateJwtToken(user, role);
+        
+        try {
+            await emailService.SendEmailAsync(new EmailMessage {
+                To = user.Email,
+                Subject = "Bienvenido a FunkoApi",
+                Body = "<h1>¡Hola!</h1><p>Tu cuenta ha sido creada con éxito.</p>",
+                IsHtml = true
+            });
+        } catch (Exception ex) {
+            Log.Error(ex, "No se pudo enviar el correo de bienvenida a {Email}", user.Email);
+        }
 
         Log.Information("Registro exitoso para {Email} con rol {Role}", signupDto.Email, role);
         return Result.Success<AuthResponseDto, DomainError>(token);

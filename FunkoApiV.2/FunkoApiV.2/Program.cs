@@ -120,10 +120,12 @@ public class Program {
             options.Configuration = FunkoConfig.RedisConnection);
 
         builder.Services.AddSingleton<ICacheService, RedisService>();
+        
+        builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("Smtp"));
 
         // 6. Scrutor (repositorios, servicios y decoradores)
         builder.Services.AddDependencies();
-
+        
         var app = builder.Build();
 
         if (app.Environment.IsDevelopment()) {
