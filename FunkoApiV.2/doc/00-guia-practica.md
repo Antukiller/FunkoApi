@@ -1,115 +1,155 @@
-# 00 — Guía práctica: qué hacer en cada momento
+# 00 — Guía práctica: arrancar, probar y desplegar
 
-Esta es la guía operativa principal del repositorio. Los comandos están escritos
-para PowerShell en Windows y se ejecutan desde la raíz del proyecto, donde están
-`Start-Development.ps1` y `Test-All.ps1`.
+Esta es la guía operativa principal. Los comandos están escritos para
+PowerShell en Windows y se ejecutan **desde la raíz del repositorio**, donde
+está `Start.ps1`. Para exponer el proyecto en clase, usa el
+[guion de presentación](22-presentacion.md).
 
-## 1. Primera vez en este equipo
+## 1. Scripts disponibles
+
+Todos los scripts se lanzan desde la raíz. `Start.ps1` es el comando único y
+delega en los demás según el modo.
+
+| Comando | Qué hace |
+|---|---|
+| `.\Start.ps1` | Desarrollo: bases de datos + API en `http://localhost:5798` |
+| `.\Start.ps1 -Port 5800` | Desarrollo en otro puerto |
+| `.\Start.ps1 -ResetData` | Borra los volúmenes de desarrollo y vuelve a sembrar |
+| `.\Start.ps1 -Bruno` | Desarrollo + ejecución completa de la colección Bruno |
+| `.\Start.ps1 -Production` | Producción: bases + backend en `http://localhost:5197` |
+| `.\Start.ps1 -Production -Build` | Reconstruye la imagen antes de arrancar |
+| `.\Start.ps1 -Production -Logs` | Sigue los logs del backend |
+| `.\Start.ps1 -Production -Down` | Para los contenedores sin borrar datos |
+| `.\Start.ps1 -Production -InitEnv` | Crea `.env.production` con secretos aleatorios |
+| `.\Test-All.ps1` | `dotnet test` + colección Bruno |
+
+`Start.ps1` rechaza combinaciones incoherentes, como `-Production -Bruno` o
+`-Production -ResetData`: producción nunca borra datos.
+
+## 2. Primera vez en este equipo
 
 Necesitas:
 
 - SDK de .NET 10.
 - Docker Desktop iniciado.
-- Bruno CLI solo si vas a lanzar la colección Bruno (`bru --version`).
+- Bruno CLI solo si vas a lanzar la colección Bruno (`bru --version`). Si no
+  está instalado, `Test-All.ps1` y `Run-Bruno.ps1` intentan usar
+  `npx --yes @usebruno/cli`.
 
-Comprueba Docker y prepara el entorno local:
+Comprueba Docker y arranca:
 
 ```powershell
 docker info
-.\Start-Development.ps1
+.\Start.ps1
 ```
 
-El script crea `FunkoApiV.2\.env` copiando `.env.example` si aún no existe,
-inicia PostgreSQL, MongoDB, Cassandra, Redis y Mailpit, y después arranca la API con
-`ASPNETCORE_ENVIRONMENT=Development` en el puerto `5798`. La API queda en primer
-plano en esa terminal. No cierres la terminal mientras la uses; para detenerla,
-pulsa `Ctrl+C`.
+En el primer arranque, `Start-Development.ps1` crea `FunkoApiV.2\.env`
+copiando `.env.example`. Ese fichero contiene valores locales de ejemplo, no
+secretos de producción. No lo subas al repositorio.
 
-El `.env` copiado contiene valores locales de ejemplo, no secretos de producción.
-No subas un `.env` real al repositorio.
-Los correos de prueba aparecen en Mailpit: <http://localhost:8025>.
-
-## 2. Cada vez que quieras trabajar con la API
-
-Desde la raíz, ejecuta:
+## 3. Trabajo diario en desarrollo
 
 ```powershell
-.\Start-Development.ps1
+.\Start.ps1
 ```
 
-Al aparecer `Now listening on: http://localhost:5798`, abre la herramienta que
-necesites:
+El script:
+
+1. Comprueba que Docker responde.
+2. Crea `.env` desde `.env.example` si falta.
+3. Levanta PostgreSQL, MongoDB, Cassandra, Redis y Mailpit.
+4. Arranca la API con `ASPNETCORE_ENVIRONMENT=Development` en el puerto 5798.
+
+La API queda en primer plano: no cierres esa terminal. Para detenerla, pulsa
+`Ctrl+C`; los contenedores de datos siguen levantados.
+
+Cuando aparezca `Now listening on: http://localhost:5798`:
 
 | Para... | Dirección |
 |---|---|
 | Swagger / REST | <http://localhost:5798/swagger> |
 | Explorador visual de GraphQL | <http://localhost:5798/graphql> |
-| Consultar funkos de forma directa | <http://localhost:5798/api/funkos?page=0&size=10> |
-| Hub SignalR autenticado | `http://localhost:5798/hubs/funkos` |
+| Consultar funkos directamente | <http://localhost:5798/api/funkos?page=0&size=10> |
+| Cliente de demostración SignalR | <http://localhost:5798/> |
+| Correos capturados (Mailpit) | <http://localhost:8025> |
 
-El endpoint SignalR es para un cliente SignalR, no para abrirlo como una página
-normal. Swagger y la interfaz visual de GraphQL se habilitan en Development.
-Para ejemplos de operaciones, consulta [GraphQL](21-GRAPHQL-EJEMPLOS.md).
-
-Si prefieres arrancar desde el IDE, el perfil `http` de
-`FunkoApiV.2/Properties/launchSettings.json` usa Development y el puerto 5798.
-En ese caso, inicia los almacenes primero con el script; si ya están iniciados,
-Docker Compose los conserva activos.
+El hub SignalR (`/hubs/funkos`) requiere un cliente SignalR autenticado, no se
+abre como una página normal. En Development, la raíz sirve la demo.
 
 ### Cambiar el puerto
 
 ```powershell
-.\Start-Development.ps1 -Port 5800
+.\Start.ps1 -Port 5800
 ```
 
-Usa la misma URL para Swagger, GraphQL y Bruno. Para Bruno:
+Usa la misma URL para Swagger, GraphQL y Bruno. Para la suite completa:
 
 ```powershell
 .\Test-All.ps1 -BaseUrl http://localhost:5800
 ```
 
-## 3. Cuentas de desarrollo
+### Volver a sembrar los datos
 
-En Development, `IdentitySeeder.cs` crea estas cuentas de ejemplo si todavía no
-existen:
+```powershell
+.\Start.ps1 -ResetData
+```
+
+Pide confirmación, borra los volúmenes de desarrollo y deja que los seeders
+vuelvan a insertar los datos de ejemplo.
+
+## 4. Cuentas de desarrollo
+
+En Development, `IdentitySeeder.cs` crea estas cuentas si todavía no existen:
 
 | Rol | Email | Contraseña inicial |
 |---|---|---|
 | ADMIN | `admin@admin.com` | `Admin123!` |
 | USER | `user@user.com` | `User123!` |
 
-Son únicamente credenciales locales para pruebas; nunca las uses en producción.
-Si cambias la contraseña de una cuenta ya creada, el seeder no la restablece.
-Para obtener un JWT, envía `POST /api/auth/login` con email y contraseña; el
-token se utiliza como `Authorization: Bearer <token>` en operaciones protegidas.
+Son credenciales locales. Si cambias la contraseña de una cuenta ya creada, el
+seeder no la restablece. Para obtener un JWT, envía `POST /api/auth/login` y
+usa el token como `Authorization: Bearer <token>`.
 
-## 4. Probar GraphQL
+## 5. Probar GraphQL
 
 1. Arranca la API en Development.
 2. Abre <http://localhost:5798/graphql>.
-3. Ejecuta una consulta de lectura de los ejemplos de
-   [GraphQL](21-GRAPHQL-EJEMPLOS.md).
-4. Para una mutación, inicia sesión y añade al panel **Headers**:
+3. Ejecuta una consulta de [los ejemplos](21-GRAPHQL-EJEMPLOS.md).
+4. Para una mutación, inicia sesión y añade en **Headers**:
    `Authorization: Bearer <JWT>`.
 
-Las mutaciones requieren rol `ADMIN`. El explorador visual no está habilitado
-en Production, aunque el endpoint GraphQL sigue mapeado. Las suscripciones usan
-WebSocket en `/graphql` y SignalR usa `/hubs/funkos`; son protocolos distintos.
+`funkos` está paginada y admite filtros, igual que la API REST:
 
-## 5. Ejecutar pruebas
+```graphql
+query {
+  funkos(page: 1, size: 10, categoriaId: "VQGCKyvzIM4") {
+    items { id name precio stock categoria }
+    totalCount
+    page
+    pageSize
+    hasNextPage
+  }
+}
+```
 
-### Suite completa
+Las mutaciones requieren rol `ADMIN`. El explorador visual y Swagger solo se
+habilitan en Development; el endpoint `POST /graphql` sigue funcionando en
+Production. Las suscripciones usan WebSocket en `/graphql` y SignalR usa
+`/hubs/funkos`: son protocolos distintos.
 
-Deja Docker Desktop iniciado y la API accesible en Development. Desde la raíz:
+## 6. Ejecutar pruebas
+
+### Suite completa (.NET + Bruno)
+
+Deja Docker Desktop iniciado. Desde la raíz:
 
 ```powershell
 .\Test-All.ps1
 ```
 
-El script ejecuta primero `dotnet test` (incluidas las pruebas de integración
-con Testcontainers) y después toda la colección Bruno. Si las credenciales ADMIN
-no están definidas, las solicita sin guardarlas en el repositorio. Bruno CLI
-debe estar instalado.
+Ejecuta `dotnet test` (incluidas las pruebas de integración con Testcontainers)
+y después toda la colección Bruno. Si faltan credenciales ADMIN, las pide sin
+guardarlas en el repositorio.
 
 ### Solo pruebas .NET
 
@@ -117,60 +157,140 @@ debe estar instalado.
 dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj
 ```
 
-Las pruebas de integración crean sus propios contenedores y necesitan Docker.
-Para ejecutar solo unitarias:
+Solo unitarias:
 
 ```powershell
 dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Unit"
 ```
 
-### Solo Bruno
+Las de integración crean sus propios contenedores y necesitan Docker.
 
-Define las variables en la sesión actual, ejecuta el script y bórralas al
-terminar. Sustituye la contraseña si la cuenta local tiene otra:
+### Solo Bruno
 
 ```powershell
 $env:FUNKO_ADMIN_EMAIL = "admin@admin.com"
 $env:FUNKO_ADMIN_PASSWORD = "Admin123!"
-.\Run-Bruno.ps1
+.\Start.ps1 -Bruno
 Remove-Item Env:FUNKO_ADMIN_EMAIL, Env:FUNKO_ADMIN_PASSWORD
 ```
 
-`Test-All.ps1` pide estas credenciales de forma segura si no las encuentra.
-No pongas contraseñas en `Bruno/environments/Local.bru`, en documentación
-compartida ni en comandos que vayan a guardarse en el historial.
+`-Bruno` levanta las bases, arranca la API en 5798, espera a que responda,
+ejecuta la colección y apaga la API que él mismo inició. La colección escribe
+datos: no la apuntes a producción ni a una base que debas conservar. Tampoco
+pongas contraseñas en `Bruno/environments/Local.bru` ni en documentación
+compartida.
 
-## 6. Entornos y comportamiento de los datos
+## 7. Entornos y datos
 
 | Entorno | Al arrancar |
 |---|---|
-| Development | Aplica el esquema y carga datos de ejemplo en PostgreSQL, MongoDB, Cassandra e Identity. |
-| Production | Borra los datos de aplicación de PostgreSQL, los proveedores MongoDB, las tablas Cassandra y las claves Redis con prefijos `funko:*`, `categoria:*` y `proveedor:*`. No crea cuentas de ejemplo; garantiza los roles `ADMIN` y `USER`. |
+| Development | Aplica el esquema y carga datos de ejemplo en PostgreSQL, MongoDB, Cassandra e Identity. Los seeders son idempotentes: reiniciar no duplica. |
+| Production | Aplica el esquema y **solo aprovisiona el administrador** definido por `BootstrapAdmin__*` si no existe. **No borra datos.** |
 
-El borrado de Production ocurre en **cada arranque del proceso backend**, aunque
-se conserven los volúmenes Docker. El registro HTTP crea usuarios con rol
-`USER`; no crea un administrador. No despliegues ni reinicies el backend en
-Production si necesitas conservar esos datos. Además, revisa la política CORS
-antes de exponerlo: sus orígenes predeterminados locales se añaden incluso en
-Production (detalle en [Seguridad HTTP](17-seguridad-http.md)).
+Diferencias que conviene tener claras:
 
-## 7. Errores habituales
+- **Datos:** en Development hay funkos, categorías y proveedores de ejemplo; en
+  Production la base empieza vacía y solo se crea el admin. No se ejecuta
+  ningún limpiador al arrancar.
+- **CORS:** en Development se añaden orígenes locales; en Production solo se
+  permiten los de `Cors__AllowedOrigins__*`.
+- **Swagger y explorador GraphQL:** disponibles en Development. En Production
+  devuelven 404, pero `POST /graphql` sigue operativo.
+- **Errores:** en Production no se incluye el detalle de las excepciones.
+- **Rate limit:** 120 peticiones por minuto y por IP en todos los entornos.
+- **Correo:** en Development se captura en Mailpit; en Production se usa el
+  SMTP real configurado en `.env.production`.
+
+## 8. Producción con un solo comando
+
+Producción usa su propio fichero de secretos, `.env.production` (no lo
+commitees), y el Compose de `FunkoApiV.2\compose.yaml`.
+
+### Primera vez
+
+```powershell
+.\Start.ps1 -Production -InitEnv
+```
+
+Genera `.env.production` con contraseñas aleatorias para PostgreSQL, JWT y el
+admin. Después revisa y ajusta:
+
+- `CORS_ALLOWED_ORIGIN_0`: origen real del frontend.
+- `SMTP_*`: proveedor de correo real. Los valores de ejemplo no envían correo.
+- `BOOTSTRAP_ADMIN_*`: cuenta administradora inicial.
+
+### Arrancar
+
+```powershell
+.\Start.ps1 -Production
+```
+
+El script levanta primero las bases, comprueba las credenciales de PostgreSQL y
+solo entonces arranca el backend. Si la contraseña no coincide con la que ya
+tiene el volumen, aborta con un mensaje claro en lugar de dejar el contenedor en
+bucle.
+
+| Servicio | URL / puerto |
+|---|---|
+| API | <http://localhost:5197> |
+| Swagger | no publicado en Production (404) |
+| GraphQL | `POST /graphql`; explorador no publicado |
+| PostgreSQL | `127.0.0.1:5432` |
+| MongoDB | `127.0.0.1:27017` |
+| Cassandra | `127.0.0.1:9043` |
+| Redis | `127.0.0.1:6379` |
+
+### Reconstruir tras cambiar código C#
+
+```powershell
+.\Start.ps1 -Production -Build
+```
+
+La imagen no se reconstruye sola: si cambias código y no usas `-Build`, seguirás
+ejecutando la versión anterior.
+
+### Logs y parada
+
+```powershell
+.\Start.ps1 -Production -Logs
+.\Start.ps1 -Production -Down
+```
+
+`-Down` no borra volúmenes. No uses `docker compose down -v` salvo que quieras
+perder los datos.
+
+### Si aparece `28P01: password authentication failed`
+
+`POSTGRES_PASSWORD` solo se aplica cuando el volumen de PostgreSQL está vacío.
+Si el volumen ya existía con otra contraseña, el backend no puede conectar.
+Para conservar los datos, cambia la contraseña dentro de Postgres:
+
+```powershell
+$password = (Select-String -Path '.\FunkoApiV.2\.env.production' `
+  -Pattern '^POSTGRES_PASSWORD=(.+)$').Matches[0].Groups[1].Value
+docker exec funkoapi_postgres psql -U postgres -d postgres `
+  -c "ALTER USER postgres WITH PASSWORD '$password';"
+.\Start.ps1 -Production
+```
+
+La alternativa es poner en `.env.production` la contraseña que ya usa el
+volumen. Borrar el volumen (`down -v`) aplica la nueva, pero pierde los datos.
+
+## 9. Errores habituales
 
 ### `compose.yaml` no encontrado
 
-Ejecuta los scripts desde la raíz del repositorio. El Compose está en
-`FunkoApiV.2\compose.yaml`; no añadas dos veces `FunkoApiV.2` a la ruta.
+Ejecuta los scripts desde la raíz. El Compose está en
+`FunkoApiV.2\compose.yaml`; no dupliques `FunkoApiV.2` en la ruta.
 
 ### `POSTGRES_PASSWORD` o `JWT_KEY` no definidos
 
-`Start-Development.ps1` crea `FunkoApiV.2\.env` desde la plantilla si falta.
-Comprueba que el fichero exista y que lo estás arrancando con el script. Docker
-Compose valida variables de todos los servicios declarados, incluido `backend`,
-aunque solo se arranquen los almacenes.
+En desarrollo, `Start-Development.ps1` crea `FunkoApiV.2\.env` desde la
+plantilla. En producción, usa `.\Start.ps1 -Production -InitEnv` y revisa
+`.env.production`. Compose valida las variables de todos los servicios aunque
+solo levantes las bases.
 
 ### El puerto 5798 ya está ocupado
-
-Identifica el proceso que escucha en el puerto:
 
 ```powershell
 Get-NetTCPConnection -LocalPort 5798 -State Listen |
@@ -178,33 +298,39 @@ Get-NetTCPConnection -LocalPort 5798 -State Listen |
 Get-Process -Id <PID>
 ```
 
-Si es una instancia tuya de la API, deténla con `Ctrl+C` en su terminal. Si no
-puedes usar ese puerto, arranca en otro con `-Port`.
+Detén tu instancia con `Ctrl+C` o usa `-Port`.
 
-### Error MSB3021/MSB3027: DLL bloqueada por `FunkoApiV.2`
+### Error MSB3021/MSB3027: DLL bloqueada
 
-La API continúa ejecutándose y Windows impide reemplazar la DLL que está usando.
-Detén la instancia con `Ctrl+C` y vuelve a compilar o ejecutar los tests. Si no
-localizas la terminal, identifica el PID con `Get-Process -Id <PID>` antes de
-detenerlo; no finalices procesos que no hayas confirmado que pertenecen a tu API.
+La API sigue ejecutándose y Windows no puede reemplazar la DLL. Detén la
+instancia con `Ctrl+C` y vuelve a compilar o a lanzar los tests.
 
 ### Swagger muestra error al cargar operaciones
 
 Confirma que abriste la URL de la instancia actual y que estás en Development.
-La definición OpenAPI se genera en `/swagger/v1/swagger.json`; si esa URL da
-error, revisa la excepción y los logs de la API.
+La definición OpenAPI está en `/swagger/v1/swagger.json`.
 
-## 8. Apagar servicios
+### El login devuelve 500 nada más desplegar
 
-`Ctrl+C` detiene la API. Para detener únicamente los almacenes de desarrollo:
+Suele ser una imagen antigua. Reconstruye con `.\Start.ps1 -Production -Build`.
+
+### El admin de producción no usa la contraseña del `.env.production`
+
+Si `admin@admin.com` ya existía (por ejemplo, porque el volumen se creó en
+Development), el bootstrap no cambia su contraseña: solo comprueba que tenga rol
+`ADMIN`. Usa la contraseña anterior (`Admin123!` en desarrollo) o crea otro
+administrador.
+
+## 10. Apagar servicios
+
+`Ctrl+C` detiene la API. Para parar solo los almacenes de desarrollo:
 
 ```powershell
 docker compose --env-file .\FunkoApiV.2\.env `
   -f .\FunkoApiV.2\compose.yaml stop db mongo_db cassandra redis
 ```
 
-Para instrucciones del stack completo y las precauciones de Production, consulta
-[Docker](19-docker.md).
+Para el stack completo, consulta [Docker](19-docker.md).
 
 ## Mapa de apuntes técnicos
 
@@ -222,12 +348,17 @@ Para instrucciones del stack completo y las precauciones de Production, consulta
 | [10](10-redis-caching.md) | Redis y caché de aplicación |
 | [11](11-patron-result.md) | Result y errores de dominio |
 | [12](12-servicios-negocio.md) | Servicios de negocio |
-| [13](13-borrado-logico.md) | Borrado lógico y limpieza Production |
+| [13](13-borrado-logico.md) | Borrado lógico |
 | [14](14-mapeadores.md) | Mapeadores |
 | [15](15-jwt-authentication.md) | Autenticación JWT |
 | [16](16-autorizacion-roles.md) | Autorización por roles |
 | [17](17-seguridad-http.md) | CORS, límites, CSP, Swagger e índices |
+| [18](18-testing.md) | Pruebas .NET y cobertura |
+| [19](19-docker.md) | Docker, desarrollo y producción |
+| [20](20-bruno-testing.md) | Colección Bruno |
+| [21](21-GRAPHQL-EJEMPLOS.md) | Ejemplos GraphQL |
+| [22](22-presentacion.md) | Guion de exposición y demo |
 
 Las páginas técnicas describen el estado actual y enlazan con las clases
 correspondientes. Para ejecutar la aplicación o las pruebas, empieza por las
-secciones anteriores de esta guía.
+secciones anteriores.

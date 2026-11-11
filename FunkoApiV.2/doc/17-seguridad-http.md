@@ -2,21 +2,18 @@
 
 ## CORS
 
-La política se configura en `Infrastructure/CorsConfig.cs`. Los orígenes
-configurados en `Cors:AllowedOrigins` se combinan con una lista predeterminada
-que actualmente incluye puertos locales y se añade en todos los entornos. Por
-tanto, aunque `appsettings.Production.json` tenga una lista vacía, esa lista no
-elimina los orígenes predeterminados. Antes de desplegar, revisa/corrige este
-comportamiento y configura los orígenes reales, por ejemplo:
+La política se configura en `Infrastructure/CorsConfig.cs`. Los orígenes de
+`Cors:AllowedOrigins` se usan en todos los entornos; además, solo en Development
+se añaden orígenes locales predeterminados (puertos 5500, 5798 y 63342). En
+Production se aplican exclusivamente los orígenes configurados, que llegan por
+`Cors__AllowedOrigins__0`, `__1`, etc. Configura los orígenes reales:
 
 ```text
 Cors__AllowedOrigins__0=https://tienda.ejemplo.com
 ```
 
-No uses `*` como sustituto de una lista de orígenes. SignalR requiere credenciales
-de conexión; revisa la política antes de cambiar CORS. Los defaults actuales
-están en `CorsConfig.cs`; los del perfil Development también están en
-`appsettings.Development.json`.
+No uses `*` como sustituto de una lista de orígenes. SignalR requiere
+credenciales de conexión; revisa la política antes de cambiar CORS.
 
 ## Límite de peticiones
 
@@ -53,17 +50,24 @@ trigramas sobre nombres activos. La base debe permitir crear la extensión y los
 índices en una inicialización nueva. Los índices parciales excluyen registros
 eliminados.
 
-Antes de añadir índices, comprueba los filtros/ordenaciones existentes y el plan
-de ejecución de consultas con datos representativos. Evita índices redundantes
-y cambios de esquema no compatibles con instalaciones que ya tienen tablas.
+Las consultas paginadas de REST y GraphQL comparten `FunkoRepository.GetPagedAsync`:
+`CountAsync` + `Skip`/`Take` y `AsNoTracking`. No hay listados que carguen la
+tabla completa. Antes de añadir índices, comprueba los filtros y ordenaciones
+existentes y revisa el plan de ejecución con datos representativos. Evita
+índices redundantes y cambios de esquema no compatibles con instalaciones que ya
+tienen tablas.
 
 ## Estado de capacidades solicitadas
 
-- CORS, rate limiting, cabeceras CSP/seguridad, Swagger, GraphQL y SignalR:
-  configurados en el código actual.
-- Redis: caché de aplicación; no hay Output Cache HTTP configurado.
-- Envío de emails: el registro intenta enviar un correo de bienvenida. SMTP se
-  configura con `Smtp__Host`, `Smtp__Port`, `Smtp__Security`, `Smtp__From`,
-  `Smtp__Username` y `Smtp__Password`. Mailpit se usa en Development.
-- Producción: el cleaner de inicio elimina datos; revisa
-  [Docker](19-docker.md) antes de desplegar.
+- CORS por entorno, rate limiting, cabeceras CSP/seguridad, Swagger, GraphQL y
+  SignalR: configurados en el código actual.
+- Seeds: solo Development. Production no borra datos y solo crea el admin si no
+  existe.
+- Redis: caché de aplicación. **Output Cache HTTP no está implementado**; es una
+  mejora opcional.
+- Emails: el registro intenta enviar un correo de bienvenida sin plantillas.
+  SMTP se configura con `Smtp__Host`, `Smtp__Port`, `Smtp__Security`,
+  `Smtp__From`, `Smtp__Username` y `Smtp__Password`. Mailpit se usa en
+  Development.
+- Producción: se arranca con `.\Start.ps1 -Production`; no hay limpieza de datos
+  al iniciar. Consulta [Docker](19-docker.md).

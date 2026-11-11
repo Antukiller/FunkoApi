@@ -13,7 +13,14 @@ Colección de pruebas HTTP automatizadas para los endpoints REST de FunkoApi.
 Arranca la API y sus dependencias desde la raíz del proyecto:
 
 ```powershell
-.\Start-Development.ps1
+.\Start.ps1
+```
+
+O ejecuta el flujo completo de Bruno, que arranca la API, espera y lanza la
+colección:
+
+```powershell
+.\Start.ps1 -Bruno
 ```
 
 ## Ejecutar
@@ -23,7 +30,7 @@ Desde la raíz, después de definir credenciales ADMIN para la sesión:
 ```powershell
 $env:FUNKO_ADMIN_EMAIL = "admin@admin.com"
 $env:FUNKO_ADMIN_PASSWORD = "Admin123!"
-.\Run-Bruno.ps1
+.\Start.ps1 -Bruno
 Remove-Item Env:FUNKO_ADMIN_EMAIL, Env:FUNKO_ADMIN_PASSWORD
 ```
 

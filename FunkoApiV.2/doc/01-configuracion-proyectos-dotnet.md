@@ -31,5 +31,6 @@ dotnet build .\FunkoApiV.2.slnx
 ```
 
 Para arrancar con las dependencias correctas, utiliza
-[`Start-Development.ps1`](../Start-Development.ps1) en lugar de suponer que
-`dotnet run` levantará PostgreSQL, MongoDB, Cassandra y Redis automáticamente.
+[`Start.ps1`](../../Start.ps1) desde la raíz (o `Start-Development.ps1` para solo
+desarrollo) en lugar de suponer que `dotnet run` levantará PostgreSQL, MongoDB,
+Cassandra y Redis automáticamente.

@@ -3,8 +3,10 @@
 ## 1. Antes de ejecutar
 
 1. Inicia Docker Desktop.
-2. Desde la raíz, ejecuta `.\Start-Development.ps1` y deja esa terminal abierta.
-3. Comprueba que la API responde en `http://localhost:5798`.
+2. Desde la raíz, ejecuta `.\Start.ps1 -Bruno` y deja que el script haga el
+   flujo completo: bases, API en 5798, espera y colección.
+3. Si prefieres hacerlo por separado, arranca la API con `.\Start.ps1` en una
+   terminal y comprueba que responde en `http://localhost:5798`.
 4. Instala Bruno CLI si aún no está disponible: `bru --version`.
 
 La colección está en `Bruno/` y el entorno `Local` apunta a
@@ -13,22 +15,29 @@ la URL del entorno local.
 
 ## 2. Ejecutar colección Bruno
 
-Desde la raíz, establece credenciales ADMIN solo para esta sesión PowerShell,
-ejecuta y luego quítalas:
+La forma recomendada es el flujo completo, que arranca y apaga la API por ti:
+
+```powershell
+.\Start.ps1 -Bruno
+```
+
+`Run-Bruno.ps1` usa `FUNKO_ADMIN_EMAIL` y `FUNKO_ADMIN_PASSWORD` si están
+definidas; si no, aplica los valores de Development (`admin@admin.com` /
+`Admin123!`). También puedes fijarlas solo para la sesión actual:
 
 ```powershell
 $env:FUNKO_ADMIN_EMAIL = "admin@admin.com"
 $env:FUNKO_ADMIN_PASSWORD = "Admin123!"
-.\Run-Bruno.ps1
+.\Start.ps1 -Bruno
 Remove-Item Env:FUNKO_ADMIN_EMAIL, Env:FUNKO_ADMIN_PASSWORD
 ```
 
 La cuenta ADMIN anterior es una cuenta de muestra que el seeder crea en
-Development. Si has cambiado su contraseña, utiliza la nueva. `Run-Bruno.ps1`
-no pide credenciales: requiere las dos variables de entorno. No guardes
+Development. Si has cambiado su contraseña, utiliza la nueva. No guardes
 contraseñas en archivos `.bru`.
 
-También se puede ejecutar solo la colección con Bruno CLI:
+También se puede ejecutar solo la colección con Bruno CLI, con la API ya
+arrancada:
 
 ```powershell
 Push-Location .\Bruno
@@ -36,8 +45,11 @@ bru run -r --env-file .\environments\Local.bru
 Pop-Location
 ```
 
-La ejecución requiere las mismas variables `FUNKO_ADMIN_EMAIL` y
-`FUNKO_ADMIN_PASSWORD`.
+Si `bru` no está instalado, los scripts usan `npx --yes @usebruno/cli`.
+
+> La colección **escribe** datos. No la ejecutes contra Production ni contra una
+> base que debas conservar. En un volumen limpio de Production fallarían las
+> peticiones que dependen de los datos sembrados en Development.
 
 ## 3. Suite completa
 
@@ -48,8 +60,8 @@ Para ejecutar primero .NET y luego Bruno:
 ```
 
 Requiere Docker Desktop, la API Development activa en el puerto del parámetro
-`BaseUrl` y Bruno CLI. Si no hay credenciales en el entorno, el script las pide
-sin escribirlas en la colección. Para un puerto distinto:
+`BaseUrl` y Bruno CLI (o `npx`). Si no hay credenciales en el entorno, el script
+las pide sin escribirlas en la colección. Para un puerto distinto:
 
 ```powershell
 .\Test-All.ps1 -BaseUrl http://localhost:5800

@@ -22,9 +22,6 @@ if (!(Get-Command dotnet -ErrorAction SilentlyContinue)) {
 }
 
 $bruno = Get-Command bru -ErrorAction SilentlyContinue
-if (!$bruno) {
-    throw "No se encontró Bruno CLI. Instálalo con: winget install --id Usabruno.bruno"
-}
 
 try {
     & docker info --format '{{.ServerVersion}}' 2>$null | Out-Null
@@ -84,7 +81,11 @@ try {
 
     Push-Location $collectionPath
     try {
-        & $bruno.Source run -r --env-file $temporaryEnvironmentFile
+        if ($bruno) {
+            & $bruno.Source run -r --env-file $temporaryEnvironmentFile
+        } else {
+            npx --yes @usebruno/cli run -r --env-file $temporaryEnvironmentFile
+        }
         if ($LASTEXITCODE -ne 0) {
             throw "Los tests de Bruno han fallado (código $LASTEXITCODE)."
         }

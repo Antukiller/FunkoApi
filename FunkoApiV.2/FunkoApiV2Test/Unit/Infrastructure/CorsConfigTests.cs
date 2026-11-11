@@ -23,7 +23,7 @@ public class CorsConfigTests {
         var services = new ServiceCollection();
 
         // Act
-        services.AddCustomCors(configuration);
+        services.AddCustomCors(configuration, isDevelopment: true);
         using var provider = services.BuildServiceProvider();
         var policy = provider.GetRequiredService<IOptions<CorsOptions>>()
             .Value.GetPolicy(CorsConfig.PolicyName);
@@ -36,6 +36,25 @@ public class CorsConfigTests {
         policy.SupportsCredentials.Should().BeTrue();
         policy.Headers.Should().Contain("*");
         policy.Methods.Should().Contain("*");
+    }
+
+    [Test]
+    public void AddCustomCors_enProduccionSoloPermiteOrigenesConfigurados() {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> {
+                ["Cors:AllowedOrigins:0"] = "https://tienda.example.com"
+            })
+            .Build();
+        var services = new ServiceCollection();
+
+        services.AddCustomCors(configuration, isDevelopment: false);
+        using var provider = services.BuildServiceProvider();
+        var policy = provider.GetRequiredService<IOptions<CorsOptions>>()
+            .Value.GetPolicy(CorsConfig.PolicyName);
+
+        policy.Should().NotBeNull();
+        policy!.Origins.Should().ContainSingle().Which.Should().Be("https://tienda.example.com");
+        policy.SupportsCredentials.Should().BeTrue();
     }
 
     [Test]

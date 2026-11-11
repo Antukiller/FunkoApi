@@ -13,20 +13,17 @@ Los detalles de filtrado están en los repositorios y servicios. Antes de
 modificar `IsDeleted`, comprueba filtros, caché y consultas cruzadas en
 PostgreSQL/MongoDB/Cassandra.
 
-## Datos de Production: limpieza física separada
+## Datos de Production
 
-El comportamiento anterior es el borrado solicitado por un cliente. Además,
-`ProductionDataCleaner.ClearAsync` vacía físicamente los datos de aplicación en
-cada inicio Production:
+Production **no borra datos al arrancar**. `Program.cs` solo aplica el esquema y
+aprovisiona el administrador definido en `BootstrapAdmin__*` si no existe. No se
+ejecuta ningún limpiador de tablas, colecciones o caché.
 
-- Tablas de Funkos, categorías y usuarios de Identity en PostgreSQL.
-- Colección de proveedores en MongoDB.
-- Tablas de lectura de Cassandra.
-- Claves Redis con prefijos `funko:*`, `categoria:*` y `proveedor:*`.
+Si necesitas vaciar datos para una demostración, hazlo de forma explícita y
+consciente, por ejemplo recreando el volumen de PostgreSQL (`down -v`) o
+ejecutando SQL a mano sobre una copia. Nunca lo dejes como efecto colateral del
+arranque.
 
-Los roles de Identity se conservan o se crean. No hay seed de usuarios
-Production. Este borrado de inicio no es un borrado lógico y no puede
-recuperarse con un filtro de API.
-
-**No arranques el backend con `ASPNETCORE_ENVIRONMENT=Production` sobre datos
-que quieras conservar.** Consulta [Docker](19-docker.md) antes de usar Compose.
+Los volúmenes Docker `funkoapiv2_*` son persistentes. `.\Start.ps1 -Production
+-Down` para los contenedores sin borrar los datos. Consulta
+[Docker](19-docker.md) antes de desplegar.

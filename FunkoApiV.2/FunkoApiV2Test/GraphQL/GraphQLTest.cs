@@ -26,7 +26,7 @@ namespace FunkoApiV2Test.GraphQL;
 [Category("Unit")]
 public class GraphQLTest
 {
-    private const string CategoriaId = "Anime000001";
+    private const string CategoriaId = "VQGCKyvzIM4";
     private const string ProveedorId = "672f1a8b3c9d4e5f6a7b8c9d";
 
     private Mock<IFunkoRepository> _funkoRepository = null!;
@@ -65,31 +65,40 @@ public class GraphQLTest
     }
 
     [Test]
-    public async Task Query_Funkos_ReturnsAllProducts()
+    public async Task Query_Funkos_DevuelvePaginaConFiltros()
     {
         _funkoRepository
-            .Setup(repository => repository.GetAllAsync())
-            .ReturnsAsync(new[]
-            {
-                NewFunko(1, "Kirito", 15.99m),
-                NewFunko(2, "Hinata", 14.50m)
-            });
+            .Setup(repository => repository.GetPagedAsync(It.IsAny<FunkoFilterRequest>()))
+            .ReturnsAsync((
+                new[]
+                {
+                    NewFunko(1, "Kirito", 15.99m),
+                    NewFunko(2, "Hinata", 14.50m)
+                },
+                2));
 
         var result = await _executor.ExecuteAsync("""
             query {
-                funkos {
-                    id
-                    name
-                    precio
-                    stock
-                    categoria
+                funkos(page: 1, size: 10, nombre: "Kirito") {
+                    items {
+                        id
+                        name
+                        precio
+                        stock
+                        categoria
+                    }
+                    totalCount
                 }
             }
             """);
 
         NoErrors(result);
-        Json(result).Should().Contain("Kirito").And.Contain("Hinata");
-        _funkoRepository.Verify(repository => repository.GetAllAsync(), Times.Once);
+        Json(result).Should().Contain("Kirito").And.Contain("Hinata").And.Contain("\"totalCount\":2");
+        _funkoRepository.Verify(repository => repository.GetPagedAsync(
+            It.Is<FunkoFilterRequest>(filter =>
+                filter.Page == 0 &&
+                filter.Size == 10 &&
+                filter.Nombre == "Kirito")), Times.Once);
     }
 
     [Test]
@@ -124,33 +133,6 @@ public class GraphQLTest
         Json(found).Should().Contain("Kirito");
         NoErrors(missing);
         Json(missing).Should().Contain("\"funkoById\":null");
-    }
-
-    [Test]
-    public async Task Query_FunkosPaged_PassesPageAndSizeToRepository()
-    {
-        _funkoRepository
-            .Setup(repository => repository.GetPagedAsync(It.IsAny<FunkoFilterRequest>()))
-            .ReturnsAsync((new[] { NewFunko(2, "Hinata", 14.50m) }, 3));
-
-        var result = await _executor.ExecuteAsync("""
-            query {
-                funkosPaged(page: 2, size: 1) {
-                    items {
-                        name
-                    }
-                    totalCount
-                    page
-                    pageSize
-                    hasNextPage
-                }
-            }
-            """);
-
-        NoErrors(result);
-        Json(result).Should().Contain("Hinata").And.Contain("\"totalCount\":3");
-        _funkoRepository.Verify(repository => repository.GetPagedAsync(
-            It.Is<FunkoFilterRequest>(filter => filter.Page == 1 && filter.Size == 1)), Times.Once);
     }
 
     [Test]
@@ -194,7 +176,7 @@ public class GraphQLTest
 
         var found = await _executor.ExecuteAsync("""
             query {
-                categoriaById(id: "Anime000001") {
+                categoriaById(id: "VQGCKyvzIM4") {
                     id
                     nombre
                 }
@@ -229,7 +211,7 @@ public class GraphQLTest
                     name: "Kirito"
                     precio: 15.99
                     stock: 10
-                    categoriaId: "Anime000001"
+                    categoriaId: "VQGCKyvzIM4"
                     proveedorId: "672f1a8b3c9d4e5f6a7b8c9d"
                     imagen: "/uploads/funkos/kirito.png"
                 }) {
@@ -249,7 +231,7 @@ public class GraphQLTest
                         name: "Kirito"
                         precio: 15.99
                         stock: 10
-                        categoriaId: "Anime000001"
+                        categoriaId: "VQGCKyvzIM4"
                         proveedorId: "672f1a8b3c9d4e5f6a7b8c9d"
                         imagen: "/uploads/funkos/kirito.png"
                     }) {
@@ -286,7 +268,7 @@ public class GraphQLTest
                     name: "Kirito"
                     precio: 15.99
                     stock: 10
-                    categoriaId: "Anime000001"
+                    categoriaId: "VQGCKyvzIM4"
                     proveedorId: "672f1a8b3c9d4e5f6a7b8c9d"
                     imagen: "/uploads/funkos/kirito.png"
                 }) {

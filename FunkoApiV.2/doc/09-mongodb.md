@@ -17,8 +17,9 @@ actualizar un Funko.
 
 El servicio de proveedores permite altas, lecturas, actualizaciones y baja
 lógica. Al añadir operaciones, invalida las claves de caché relacionadas.
-Production limpia la colección `proveedor` al iniciar; los datos de proveedores
-no se conservan al reiniciar el backend en ese entorno.
+Production **no** limpia la colección `proveedor` al iniciar: los datos se
+conservan en el volumen de MongoDB. Solo Development inserta proveedores de
+ejemplo.
 
 Para el modelo exacto y los filtros, usa el código actual en
 `Models/Proveedor.cs`, `Repository/Proveedor/ProveedorRepository.cs` y

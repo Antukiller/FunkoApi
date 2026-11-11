@@ -23,7 +23,7 @@ public class CategoriaByIdDataLoaderTests {
         await using (var seedContext = new AppDbContext(options)) {
             await seedContext.Database.EnsureCreatedAsync();
             seedContext.Categorias.Add(new Categoria {
-                Id = "Anime000001",
+                Id = "VQGCKyvzIM4",
                 Nombre = "Anime",
                 CreatedAt = DateTime.UtcNow
             });
@@ -37,11 +37,11 @@ public class CategoriaByIdDataLoaderTests {
             factory.Object, Mock.Of<IBatchScheduler>(), new DataLoaderOptions());
 
         // Act
-        var resultado = await loader.LoadBatch(["Anime000001", "NoExiste00001"], CancellationToken.None);
+        var resultado = await loader.LoadBatch(["VQGCKyvzIM4", "NoExiste00001"], CancellationToken.None);
 
         // Assert
-        resultado.Should().ContainKey("Anime000001");
-        resultado["Anime000001"].Nombre.Should().Be("Anime");
+        resultado.Should().ContainKey("VQGCKyvzIM4");
+        resultado["VQGCKyvzIM4"].Nombre.Should().Be("Anime");
         resultado.Should().NotContainKey("NoExiste00001");
     }
 

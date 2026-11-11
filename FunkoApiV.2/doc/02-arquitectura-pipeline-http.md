@@ -24,8 +24,8 @@ Cassandra, Redis y dependencias Scrutor. Al construir la aplicación:
 
 1. Swagger UI se activa solo en Development.
 2. Inicializa el esquema PostgreSQL/Cassandra.
-3. En Development ejecuta los seeders; en otros entornos limpia los datos y
-   garantiza los roles.
+3. En Development ejecuta los seeders; en Production solo garantiza los roles y
+   aprovisiona el admin configurado si no existe. No borra datos.
 4. Configura cabeceras de seguridad fuera de Development.
 5. Habilita redirección HTTPS, archivos estáticos, CORS, rate limiting,
    autenticación, autorización, WebSockets, controladores, SignalR y GraphQL.
@@ -42,5 +42,5 @@ middleware global registrado en `Program.cs`.
 
 ## Entorno de trabajo
 
-Arranca dependencias y API con `.\Start-Development.ps1` desde la raíz. Para
-pasos y direcciones, consulta [la guía práctica](00-guia-practica.md).
+Arranca dependencias y API con `.\Start.ps1` desde la raíz. Para pasos y
+direcciones, consulta [la guía práctica](00-guia-practica.md).

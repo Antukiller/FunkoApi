@@ -36,7 +36,7 @@ public class FunkoServiceTests {
         Id = ObjectId.Parse(ProveedorId), Nombre = "Proveedor Test", CreatedAt = DateTime.UtcNow, IsDeleted = false
     };
     private static Categoria CategoriaSeed => new() {
-        Id = "Anime000001", Nombre = "Anime", CreatedAt = DateTime.UtcNow, IsDeleted = false
+        Id = "VQGCKyvzIM4", Nombre = "Anime", CreatedAt = DateTime.UtcNow, IsDeleted = false
     };
 
     [SetUp]
@@ -54,9 +54,9 @@ public class FunkoServiceTests {
         var mockClientProxy = new Mock<IClientProxy>();
         _storage = new Mock<IStorageService>();
 
-        _repoCategoria.Setup(x => x.GetById("Anime000001"))
+        _repoCategoria.Setup(x => x.GetById("VQGCKyvzIM4"))
             .ReturnsAsync(Result.Success<Categoria, DomainError>(CategoriaSeed));
-        _repoCategoria.Setup(x => x.GetById(It.Is<string>(s => s != "Anime000001")))
+        _repoCategoria.Setup(x => x.GetById(It.Is<string>(s => s != "VQGCKyvzIM4")))
             .ReturnsAsync(Result.Failure<Categoria, DomainError>(NotFound.FromId("x", "Categoria")));
         _repoProveedor.Setup(x => x.GetById(ProveedorId))
             .ReturnsAsync(Result.Success<Proveedor, DomainError>(ProveedorSeed));
@@ -106,9 +106,9 @@ public class FunkoServiceTests {
     public async Task Add_ConDatosValidos_DevuelveDto() {
         var creado = new Funko {
             Id = 1, Name = "Kirito", Precio = 15.99m, Stock = 10,
-            Imagen = "/uploads/funkos/a.png", CategoriaId = "Anime000001",
+            Imagen = "/uploads/funkos/a.png", CategoriaId = "VQGCKyvzIM4",
             ProveedorId = ProveedorId,
-            Categoria = new Categoria { Id = "Anime000001", Nombre = "Anime" },
+            Categoria = new Categoria { Id = "VQGCKyvzIM4", Nombre = "Anime" },
             CreatedAt = DateTime.UtcNow
         };
         _repo.Setup(x => x.CreateAsync(It.IsAny<Funko>()))
@@ -125,7 +125,7 @@ public class FunkoServiceTests {
     public async Task Add_ConStockCero_DevuelveDto() {
         var creado = new Funko {
             Id = 2, Name = "Kirito", Precio = 0.01m, Stock = 0,
-            Imagen = "/uploads/funkos/a.png", CategoriaId = "Anime000001",
+            Imagen = "/uploads/funkos/a.png", CategoriaId = "VQGCKyvzIM4",
             ProveedorId = ProveedorId, Categoria = CategoriaSeed, CreatedAt = DateTime.UtcNow
         };
         _repo.Setup(x => x.CreateAsync(It.IsAny<Funko>()))
@@ -161,7 +161,7 @@ public class FunkoServiceTests {
     public async Task GetAll_DevuelvePaginaYMapeaLosFunkos() {
         var funko = new Funko {
             Id = 1, Name = "Kirito", Precio = 15.99m, Stock = 10,
-            CategoriaId = "Anime000001", Categoria = CategoriaSeed,
+            CategoriaId = "VQGCKyvzIM4", Categoria = CategoriaSeed,
             ProveedorId = ProveedorId, CreatedAt = DateTime.UtcNow
         };
         var filtro = new FunkoFilterRequest { Page = 1, Size = 5 };
@@ -191,7 +191,7 @@ public class FunkoServiceTests {
                 Id = 1,
                 Name = "Kirito",
                 Precio = 15.99m,
-                CategoriaId = "Anime000001",
+                CategoriaId = "VQGCKyvzIM4",
                 Categoria = CategoriaSeed,
                 ProveedorId = ProveedorId
             }));
@@ -207,7 +207,7 @@ public class FunkoServiceTests {
     public async Task Update_ConDatosValidos_DevuelveDtoActualizado() {
         var actualizado = new Funko {
             Id = 1, Name = "Kirito Act", Precio = 20m, Stock = 5,
-            CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId,
             Categoria = CategoriaSeed, CreatedAt = DateTime.UtcNow
         };
         _repo.Setup(x => x.GetByIdAsync(1))
@@ -217,7 +217,7 @@ public class FunkoServiceTests {
 
         var resultado = await _service.Update(1, new FunkoUpdateRequest {
             Name = "Kirito Act", Precio = 20m, Stock = 5,
-            CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId,
             Imagen = "https://ejemplo.com/funko.png"
         });
 
@@ -233,7 +233,7 @@ public class FunkoServiceTests {
 
         var resultado = await _service.Update(99, new FunkoUpdateRequest {
             Name = "Kirito Act", Precio = 20m, Stock = 5,
-            CategoriaId = "Anime000001", ProveedorId = ProveedorId
+            CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId
         });
 
         resultado.IsFailure.Should().BeTrue();
@@ -246,12 +246,12 @@ public class FunkoServiceTests {
         _repo.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(Result.Success<Funko, DomainError>(new Funko {
                 Id = 1, Name = "Kirito", Precio = 15.99m, Stock = 10,
-                CategoriaId = "Anime000001", ProveedorId = ProveedorId
+                CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId
             }));
 
         var resultado = await _service.Update(1, new FunkoUpdateRequest {
             Name = "", Precio = 0m, Stock = -1,
-            CategoriaId = "Anime000001", ProveedorId = ProveedorId
+            CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId
         });
 
         resultado.IsFailure.Should().BeTrue();
@@ -263,14 +263,14 @@ public class FunkoServiceTests {
     public async Task Update_ConProveedorInexistente_DevuelveConflictYSinActualizar() {
         _repo.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(Result.Success<Funko, DomainError>(new Funko {
-                Id = 1, Name = "Kirito", CategoriaId = "Anime000001", ProveedorId = ProveedorId
+                Id = 1, Name = "Kirito", CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId
             }));
 
         var resultado = await _service.Update(1, new FunkoUpdateRequest {
             Name = "Kirito",
             Precio = 15m,
             Stock = 1,
-            CategoriaId = "Anime000001",
+            CategoriaId = "VQGCKyvzIM4",
             ProveedorId = "000000000000000000000000"
         });
 
@@ -284,7 +284,7 @@ public class FunkoServiceTests {
         _repo.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(Result.Success<Funko, DomainError>(new Funko {
                 Id = 1,
-                CategoriaId = "Anime000001",
+                CategoriaId = "VQGCKyvzIM4",
                 ProveedorId = ProveedorId
             }));
         _repo.Setup(x => x.DeleteAsync(1))
@@ -296,21 +296,21 @@ public class FunkoServiceTests {
         resultado.Value.Should().BeTrue();
         _repo.Verify(x => x.DeleteAsync(1), Times.Once);
         _repoCassandra.Verify(repository =>
-            repository.EliminarFunkoAsync("Anime000001", ProveedorId, 1), Times.Once);
+            repository.EliminarFunkoAsync("VQGCKyvzIM4", ProveedorId, 1), Times.Once);
     }
 
     [Test]
     public async Task Update_ConFunkoEliminado_DevuelveConflict() {
         var eliminado = new Funko {
             Id = 1, Name = "Kirito", Precio = 15.99m, Stock = 10,
-            CategoriaId = "Anime000001", ProveedorId = ProveedorId, IsDeleted = true
+            CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId, IsDeleted = true
         };
         _repo.Setup(x => x.GetByIdAsync(1))
             .ReturnsAsync(Result.Success<Funko, DomainError>(eliminado));
 
         var resultado = await _service.Update(1, new FunkoUpdateRequest {
             Name = "Kirito", Precio = 15.99m, Stock = 10,
-            CategoriaId = "Anime000001", ProveedorId = ProveedorId
+            CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId
         });
 
         resultado.IsFailure.Should().BeTrue();
@@ -320,7 +320,7 @@ public class FunkoServiceTests {
     [Test]
     public async Task UpdateImagen_GuardaLaNuevaYBorraLaAnterior() {
         var anterior = new Funko {
-            Id = 1, CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            Id = 1, CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId,
             Imagen = "/uploads/funkos/vieja.png"
         };
         var actualizado = anterior with { Imagen = "/uploads/funkos/nueva.png" };
@@ -341,7 +341,7 @@ public class FunkoServiceTests {
 
     [Test]
     public async Task UpdateImagen_SiSetImagenFalla_LimpiaLaImagenNueva() {
-        var anterior = new Funko { Id = 1, CategoriaId = "Anime000001", ProveedorId = ProveedorId, Imagen = "/uploads/funkos/vieja.png" };
+        var anterior = new Funko { Id = 1, CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId, Imagen = "/uploads/funkos/vieja.png" };
         _repo.Setup(x => x.GetByIdAsync(1)).ReturnsAsync(Result.Success<Funko, DomainError>(anterior));
         _storage.Setup(x => x.SaveFileAsync(It.IsAny<IFormFile>(), "funkos"))
             .ReturnsAsync(Result.Success<string, DomainError>("/uploads/funkos/nueva.png"));
@@ -369,7 +369,7 @@ public class FunkoServiceTests {
     [Test]
     public async Task UpdateImagen_SiFallaElGuardado_NoActualizaNiBorraImagen() {
         var anterior = new Funko {
-            Id = 1, CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            Id = 1, CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId,
             Imagen = "/uploads/funkos/vieja.png"
         };
         var file = new Mock<IFormFile>().Object;
@@ -388,7 +388,7 @@ public class FunkoServiceTests {
     [Test]
     public async Task UpdateImagen_SinImagenAnterior_NoIntentaEliminarArchivo() {
         var funko = new Funko {
-            Id = 1, CategoriaId = "Anime000001", ProveedorId = ProveedorId
+            Id = 1, CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId
         };
         var file = new Mock<IFormFile>().Object;
         _repo.Setup(x => x.GetByIdAsync(1))
@@ -430,7 +430,7 @@ public class FunkoServiceTests {
 
     private static FunkoCreateRequest CreateRequest() => new() {
         Name = "Kirito", Precio = 15.99m, Stock = 10,
-        CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+        CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId,
         Imagen = "/uploads/funkos/a.png"
     };
 }

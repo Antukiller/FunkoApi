@@ -1,83 +1,123 @@
 # FunkoApi
 
-API REST para gestionar Funkos, categorías, proveedores y usuarios. Está desarrollada con ASP.NET Core/.NET 10 y usa PostgreSQL, MongoDB, Cassandra y Redis. También ofrece GraphQL, SignalR, Swagger en desarrollo y una colección de pruebas Bruno.
+API para gestionar Funkos, categorías, proveedores y usuarios, desarrollada con
+ASP.NET Core/.NET 10. Combina REST, GraphQL y SignalR con PostgreSQL, MongoDB,
+Cassandra y Redis. Esta página resume el proyecto; el recorrido completo está en
+la [guía práctica](doc/00-guia-practica.md) y el
+[guion de presentación](doc/22-presentacion.md).
 
-## ¿Qué necesito hacer ahora?
+## Arranque rápido
 
-| Si quieres... | Sigue esta guía |
-|---|---|
-| Preparar el equipo y arrancar la API en desarrollo | [Guía práctica](doc/00-guia-practica.md) |
-| Ejecutar las pruebas .NET y Bruno | [Testing](doc/18-testing.md) y [Bruno](doc/20-bruno-testing.md) |
-| Probar consultas, mutaciones o suscripciones GraphQL | [Ejemplos GraphQL](doc/21-GRAPHQL-EJEMPLOS.md) |
-| Entender los servicios Docker y producción | [Docker](doc/19-docker.md) |
-| Consultar las decisiones de seguridad HTTP | [Seguridad HTTP](doc/17-seguridad-http.md) |
-
-**Arranque habitual en Windows, desde esta carpeta:**
+Los comandos se ejecutan **desde la raíz del repositorio**, donde está
+`Start.ps1` (un nivel por encima de esta carpeta).
 
 ```powershell
-.\Start-Development.ps1
+.\Start.ps1              # Desarrollo: bases + API en http://localhost:5798
+.\Start.ps1 -Bruno       # Desarrollo + colección Bruno
+.\Start.ps1 -Production  # Producción: bases + backend en http://localhost:5197
 ```
 
-Cuando la API indique que está escuchando, abre:
+| Comando | Uso |
+|---|---|
+| `.\Start.ps1` | Desarrollo en 5798 |
+| `.\Start.ps1 -Port 5800` | Desarrollo en otro puerto |
+| `.\Start.ps1 -ResetData` | Borra volúmenes y vuelve a sembrar |
+| `.\Start.ps1 -Bruno` | Flujo completo de desarrollo + Bruno |
+| `.\Start.ps1 -Production` | Producción en 5197 |
+| `.\Start.ps1 -Production -Build` | Reconstruye la imagen |
+| `.\Start.ps1 -Production -Logs` | Sigue los logs del backend |
+| `.\Start.ps1 -Production -Down` | Para los contenedores sin borrar datos |
+| `.\Start.ps1 -Production -InitEnv` | Genera `.env.production` con secretos |
+| `.\Test-All.ps1` | `dotnet test` + Bruno |
 
-- Swagger: <http://localhost:5798/swagger>
-- GraphQL y su explorador visual: <http://localhost:5798/graphql>
-- SignalR: <http://localhost:5798/hubs/funkos> (requiere JWT)
+Cuando la API esté escuchando:
 
-Para apagarla, usa `Ctrl+C` en la misma terminal.
+- Swagger: <http://localhost:5798/swagger> (solo Development)
+- GraphQL: <http://localhost:5798/graphql> (explorador solo Development)
+- Demo SignalR: <http://localhost:5798/> (requiere cuenta ADMIN)
+- Mailpit: <http://localhost:8025>
 
 ## Qué incluye el proyecto
 
+- Arquitectura por capas: controladores, servicios, repositorios, DTOs,
+  validación y patrón `Result`.
 - REST para Funkos, categorías, proveedores y autenticación.
-- GraphQL con consultas, mutaciones, cargas y suscripciones.
+- GraphQL con consultas paginadas y filtradas, mutaciones, cargas y
+  suscripciones. El explorador visual solo se habilita en Development.
 - SignalR en el hub autenticado `/hubs/funkos`.
-- PostgreSQL para Funkos, categorías e Identity; MongoDB para proveedores; Cassandra para consultas agregadas; Redis para caché.
-- Email de bienvenida al registrar usuarios; en desarrollo los mensajes se capturan con Mailpit.
-- Validación con FluentValidation, respuestas de error coherentes, autorización JWT por roles y borrado lógico en Funkos/categorías.
-- Límites de peticiones, CORS configurable, cabeceras CSP/seguridad en producción e índices PostgreSQL para filtros y búsquedas.
-- Tests .NET y colección Bruno.
+- PostgreSQL para Funkos, categorías e Identity; MongoDB para proveedores;
+  Cassandra para consultas agregadas; Redis como caché de aplicación.
+- Correo de bienvenida al registrar usuarios, sin plantillas: asunto y cuerpo se
+  construyen en código. En Development se captura con Mailpit.
+- JWT, roles, borrado lógico, rate limiting (120 peticiones/minuto por IP),
+  CORS por entorno y cabeceras CSP/seguridad en Production.
+- Índices PostgreSQL para filtros, ordenaciones y búsquedas por trigramas.
+- 286 tests .NET y una colección Bruno de 34 peticiones y 80 comprobaciones.
+- Docker Compose con un único comando de arranque por entorno.
 
-**Aún no forma parte del código:** Output Cache HTTP. Redis está integrado como caché de aplicación; no equivale a Output Cache.
+**Output Cache HTTP no está implementado.** Redis se usa como caché de
+aplicación (lecturas por id); no es lo mismo que Output Cache.
 
-## Entornos y datos: lee antes de arrancar producción
+## Entornos y datos
 
-- **Development:** al iniciar la API, aplica el esquema e inserta datos de ejemplo en PostgreSQL, MongoDB, Cassandra e Identity. El seeding es idempotente para los datos existentes. Las cuentas de ejemplo solo se crean en este entorno.
-- **Production:** al iniciar la API, elimina los datos de las tablas de aplicación PostgreSQL, los proveedores MongoDB, las tablas Cassandra y las claves Redis con prefijos `funko:*`, `categoria:*` y `proveedor:*`. No inserta usuarios de ejemplo; conserva o crea los roles `ADMIN` y `USER`.
+- **Development:** aplica el esquema y carga datos de ejemplo en PostgreSQL,
+  MongoDB, Cassandra e Identity. Los seeders son idempotentes: reiniciar no
+  duplica ni borra. Crea las cuentas `admin@admin.com` / `Admin123!` y
+  `user@user.com` / `User123!`.
+- **Production:** aplica el esquema y solo aprovisiona el administrador
+  configurado en `BootstrapAdmin__*` si no existe. **No borra datos** y no carga
+  datos de ejemplo. Usa `.env.production` con secretos propios.
 
-Por tanto, **cada reinicio del backend en producción vuelve a vaciar esos datos**. No uses Production para guardar datos que quieras conservar. El registro público crea usuarios `USER`, no crea administradores. Revisa [la guía de Docker](doc/19-docker.md) antes de desplegar.
+Diferencias prácticas:
 
-> El Compose actual ejecuta la API y cada almacén en servicios/contenedores separados; no es una imagen única autocontenida. Levantar el backend en Production activa el borrado anterior.
+| Aspecto | Development | Production |
+|---|---|---|
+| Datos de ejemplo | Sí | No |
+| Borrado al arrancar | No | No |
+| Swagger / explorador GraphQL | Sí | 404 |
+| `POST /graphql` | Sí | Sí |
+| CORS | Orígenes locales + configuración | Solo configuración |
+| Correo | Mailpit | SMTP real |
+| Detalle de excepciones | Sí | No |
 
-> **Antes de producción:** revisa también CORS. La configuración actual combina
-> los orígenes configurados con orígenes locales predeterminados en todos los
-> entornos; se explica en [Seguridad HTTP](doc/17-seguridad-http.md).
+El primer arranque de Production necesita `.\Start.ps1 -Production -InitEnv`
+para generar `.env.production`. El script valida las credenciales de PostgreSQL
+antes de arrancar el backend y nunca borra volúmenes.
 
 ## Estructura
 
 ```text
-FunkoApiV.2/
-├── FunkoApiV.2/       # API, controladores, servicios, repositorios e infraestructura
-├── FunkoApiV2Test/    # Tests unitarios y de integración
-├── Bruno/             # Colección de pruebas HTTP
-├── doc/               # Guías operativas y apuntes técnicos
-├── Start-Development.ps1
-├── Test-All.ps1
+FunkoApi/
+├── Start.ps1              # Comando único: desarrollo, Bruno o producción
+├── FunkoApiV.2/
+│   ├── FunkoApiV.2/       # API, controladores, servicios, repositorios e infraestructura
+│   ├── FunkoApiV2Test/    # Tests unitarios y de integración
+│   ├── Bruno/             # Colección de pruebas HTTP
+│   ├── doc/               # Guías operativas y apuntes técnicos
+│   ├── Start-Development.ps1
+│   ├── Start-Production.ps1
+│   ├── Run-Bruno.ps1
+│   ├── Test-All.ps1
+│   └── README.md
 └── README.md
 ```
 
 ## Documentación
 
-- [00 — Guía práctica: preparar, arrancar, probar y solucionar problemas](doc/00-guia-practica.md)
+- [00 — Guía práctica: scripts, entornos, pruebas y problemas](doc/00-guia-practica.md)
+- [22 — Guion de presentación y demo](doc/22-presentacion.md)
 - [17 — Seguridad HTTP, Swagger, GraphQL e índices](doc/17-seguridad-http.md)
 - [18 — Tests .NET y cobertura](doc/18-testing.md)
 - [19 — Docker, desarrollo y producción](doc/19-docker.md)
 - [20 — Bruno](doc/20-bruno-testing.md)
 - [21 — Ejemplos GraphQL](doc/21-GRAPHQL-EJEMPLOS.md)
-- [Índice de los apuntes 01–17](doc/00-guia-practica.md#mapa-de-apuntes-técnicos)
 
 ## Tecnología y versiones
 
-Los `PackageReference` y el framework objetivo están en `FunkoApiV.2/FunkoApiV.2.csproj` y `FunkoApiV2Test/FunkoApiV2Test.csproj`. Consulta esos archivos como fuente de verdad: las versiones de NuGet evolucionan y no deben copiarse de tablas antiguas.
+Los `PackageReference` y el framework objetivo están en
+`FunkoApiV.2/FunkoApiV.2.csproj` y
+`FunkoApiV2Test/FunkoApiV2Test.csproj`. Consulta esos archivos como fuente de
+verdad.
 
 ## Atribución
 

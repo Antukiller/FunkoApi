@@ -117,9 +117,9 @@ public class DbSeederTests {
         await CassandraSeeder.SeedAsync(_cassandraSession!, _postgres, _mongo, NullLogger.Instance);
 
         // Assert
-        (await repository.GetFunkosPorCategoria("Anime000001")).Should().HaveCount(2);
+        (await repository.GetFunkosPorCategoria("VQGCKyvzIM4")).Should().HaveCount(2);
         (await repository.GetFunkosPorProveedor("672f1a8b3c9d4e5f6a7b8c9d")).Should().HaveCount(5);
         (await repository.GetFunkosPorProveedorCategoria(
-            "672f1a8b3c9d4e5f6a7b8c9d", "Videojuego1")).Should().HaveCount(2);
+            "672f1a8b3c9d4e5f6a7b8c9d", "zw47_q9wbBE")).Should().HaveCount(2);
     }
 }

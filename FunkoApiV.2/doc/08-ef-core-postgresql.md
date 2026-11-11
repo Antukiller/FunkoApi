@@ -30,5 +30,6 @@ Antes de cambiar una entidad:
 5. Si un esquema persistente no coincide, planifica su migración de manera
    controlada; no borres volúmenes como método de actualización rutinario.
 
-En Production hay un cleaner intencional que vacía datos de aplicación al
-arranque. Lee [Docker](19-docker.md) antes de iniciar ese entorno.
+En Production no se borran datos al arrancar: solo se aplica el esquema y se
+aprovisiona el admin si no existe. Lee [Docker](19-docker.md) antes de iniciar
+ese entorno.

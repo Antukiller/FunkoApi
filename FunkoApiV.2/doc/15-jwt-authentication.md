@@ -29,10 +29,10 @@ mediante variable de entorno/secreto, no en JSON compartido.
 ## Registro y usuarios Production
 
 El endpoint de registro crea un usuario con rol `USER`; no permite que el
-solicitante se asigne `ADMIN`. Production borra usuarios en cada arranque y
-solo garantiza que existan definiciones de roles. Debes aprovisionar de forma
-segura cualquier cuenta administradora antes de habilitar operaciones que la
-requieran.
+solicitante se asigne `ADMIN`. Production no borra usuarios: conserva los
+existentes, garantiza las definiciones de roles y crea el admin de
+`BootstrapAdmin__*` solo si no existe. Aprovisiona esa cuenta de forma segura
+antes de habilitar operaciones que la requieran.
 
 Ver también [autorización por roles](16-autorizacion-roles.md) y
 [seguridad HTTP](17-seguridad-http.md).

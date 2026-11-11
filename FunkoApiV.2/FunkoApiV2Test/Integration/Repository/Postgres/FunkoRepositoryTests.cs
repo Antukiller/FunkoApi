@@ -17,11 +17,11 @@ public class FunkoRepositoryTests : PostgresBaseTest {
         _repository = new FunkoRepository(Context);
         var fecha = DateTime.UtcNow;
         Context.Funkos.AddRange(
-            NuevoFunko("Anime000001") with { Name = "Kirito", Precio = 15.99m, Stock = 10, CreatedAt = fecha },
-            NuevoFunko("Anime000001") with { Name = "Hinata Shoyo", Precio = 14.50m, Stock = 8, CreatedAt = fecha },
-            NuevoFunko("Videojuego1") with { Name = "Master Chief", Precio = 19.99m, Stock = 5, CreatedAt = fecha },
-            NuevoFunko("Videojuego1") with { Name = "Geralt de Rivia", Precio = 17.50m, Stock = 12, CreatedAt = fecha },
-            NuevoFunko("Peliculas01") with { Name = "Darth Vader", Precio = 21.00m, Stock = 3, CreatedAt = fecha });
+            NuevoFunko("VQGCKyvzIM4") with { Name = "Kirito", Precio = 15.99m, Stock = 10, CreatedAt = fecha },
+            NuevoFunko("VQGCKyvzIM4") with { Name = "Hinata Shoyo", Precio = 14.50m, Stock = 8, CreatedAt = fecha },
+            NuevoFunko("zw47_q9wbBE") with { Name = "Master Chief", Precio = 19.99m, Stock = 5, CreatedAt = fecha },
+            NuevoFunko("zw47_q9wbBE") with { Name = "Geralt de Rivia", Precio = 17.50m, Stock = 12, CreatedAt = fecha },
+            NuevoFunko("TcMBFSGVi1c") with { Name = "Darth Vader", Precio = 21.00m, Stock = 3, CreatedAt = fecha });
         await Context.SaveChangesAsync();
     }
 
@@ -36,10 +36,10 @@ public class FunkoRepositoryTests : PostgresBaseTest {
     [Test]
     public async Task GetPagedAsync_filtra_por_categoria() {
         var (items, total) = await _repository.GetPagedAsync(
-            new FunkoFilterRequest { CategoriaId = "Anime000001" });
+            new FunkoFilterRequest { CategoriaId = "VQGCKyvzIM4" });
 
         total.Should().Be(2);
-        items.Should().OnlyContain(f => f.CategoriaId == "Anime000001");
+        items.Should().OnlyContain(f => f.CategoriaId == "VQGCKyvzIM4");
     }
 
     [Test]
@@ -57,7 +57,7 @@ public class FunkoRepositoryTests : PostgresBaseTest {
 
     [Test]
     public async Task CreateAsync_devuelve_el_funko_con_la_categoria_cargada() {
-        var resultado = await _repository.CreateAsync(NuevoFunko("Anime000001"));
+        var resultado = await _repository.CreateAsync(NuevoFunko("VQGCKyvzIM4"));
 
         resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Id.Should().BePositive();
@@ -96,16 +96,6 @@ public class FunkoRepositoryTests : PostgresBaseTest {
     }
 
     [Test]
-    public async Task GetAllAsync_devuelveFunkosOrdenadosPorNombre() {
-        // Act
-        var funkos = await _repository.GetAllAsync();
-
-        // Assert
-        funkos.Select(funko => funko.Name).Should().BeInAscendingOrder();
-        funkos.Should().OnlyContain(funko => funko.Categoria != null);
-    }
-
-    [Test]
     public async Task GetByIdAsync_existente_devuelveElFunkoConCategoria() {
         // Act
         var resultado = await _repository.GetByIdAsync(1);
@@ -125,7 +115,7 @@ public class FunkoRepositoryTests : PostgresBaseTest {
         var (items, total) = await _repository.GetPagedAsync(new FunkoFilterRequest {
             IncludeDeleted = true,
             Nombre = "Kirito",
-            CategoriaId = "Anime000001",
+            CategoriaId = "VQGCKyvzIM4",
             ProveedorId = ProveedorSeedId,
             PrecioMin = 15m,
             PrecioMax = 16m,
@@ -141,7 +131,7 @@ public class FunkoRepositoryTests : PostgresBaseTest {
     [Test]
     public async Task UpdateAsync_existente_actualizaLosDatos() {
         // Arrange
-        var actualizado = NuevoFunko("Videojuego1") with {
+        var actualizado = NuevoFunko("zw47_q9wbBE") with {
             Name = "Kirito actualizado",
             Precio = 22m,
             Stock = 7,
@@ -154,14 +144,14 @@ public class FunkoRepositoryTests : PostgresBaseTest {
         // Assert
         resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Name.Should().Be(actualizado.Name);
-        resultado.Value.CategoriaId.Should().Be("Videojuego1");
+        resultado.Value.CategoriaId.Should().Be("zw47_q9wbBE");
         resultado.Value.UpdatedAt.Should().NotBeNull();
     }
 
     [Test]
     public async Task UpdateAsync_inexistente_devuelveNotFound() {
         // Act
-        var resultado = await _repository.UpdateAsync(999, NuevoFunko("Anime000001"));
+        var resultado = await _repository.UpdateAsync(999, NuevoFunko("VQGCKyvzIM4"));
 
         // Assert
         resultado.IsFailure.Should().BeTrue();

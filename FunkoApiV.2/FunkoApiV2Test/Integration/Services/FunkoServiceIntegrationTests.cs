@@ -64,7 +64,7 @@ public class FunkoServiceIntegrationTests {
             return m.Object;
         });
         services.AddScoped<IFunkoService, FunkoService>();
-        services.AddRealtimeSignalR();
+        services.AddRealtimeSignalR(isDevelopment: false);
         services.AddSingleton<IStorageService>(new Mock<IStorageService>().Object);
         services.AddLogging();
         services.AddTransient<IValidator<FunkoCreateRequest>, FunkoCreateValidator>();
@@ -74,7 +74,7 @@ public class FunkoServiceIntegrationTests {
         await _db.Database.ExecuteSqlRawAsync("DROP SCHEMA public CASCADE; CREATE SCHEMA public;");
         await _db.Database.EnsureCreatedAsync();
         _db.Categorias.Add(new FunkoApiV._2.Models.Categoria {
-            Id = "Anime000001",
+            Id = "VQGCKyvzIM4",
             Nombre = "Anime",
             Descripcion = "Personajes de series de anime y manga",
             CreatedAt = DateTime.UtcNow
@@ -84,7 +84,7 @@ public class FunkoServiceIntegrationTests {
             Precio = 15.99m,
             Stock = 10,
             Imagen = "/uploads/funkos/placeholder.png",
-            CategoriaId = "Anime000001",
+            CategoriaId = "VQGCKyvzIM4",
             ProveedorId = ProveedorId,
             CreatedAt = DateTime.UtcNow
         });
@@ -110,13 +110,13 @@ public class FunkoServiceIntegrationTests {
     public async Task CreateAsync_ConDatosValidos_CreaYDevuelveDto() {
         var req = new FunkoCreateRequest {
             Name = "Kirito", Precio = 15.99m, Stock = 10,
-            CategoriaId = "Anime000001", ProveedorId = ProveedorId,
+            CategoriaId = "VQGCKyvzIM4", ProveedorId = ProveedorId,
             Imagen = "/uploads/funkos/placeholder.png"
         };
         var r = await _service.Add(req);
         r.IsSuccess.Should().BeTrue();
         r.Value.Id.Should().BeGreaterThan(0);
-        r.Value.CategoriaId.Should().Be("Anime000001");
+        r.Value.CategoriaId.Should().Be("VQGCKyvzIM4");
     }
 
     [Test]

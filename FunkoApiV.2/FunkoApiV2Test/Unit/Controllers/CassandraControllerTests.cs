@@ -23,15 +23,15 @@ public class CassandraControllerTests {
     public async Task GetFunkosPorCategoria_devuelveOkConResultados() {
         // Arrange
         IReadOnlyList<FunkosPorCategoriaDto> funkos = [new() {
-            CategoriaId = "Anime000001",
+            CategoriaId = "VQGCKyvzIM4",
             FunkoId = 42,
             Nombre = "Kirito"
         }];
-        _service.Setup(service => service.GetFunkosPorCategoria("Anime000001"))
+        _service.Setup(service => service.GetFunkosPorCategoria("VQGCKyvzIM4"))
             .ReturnsAsync(funkos);
 
         // Act
-        var resultado = await _controller.GetFunkosPorCategoria("Anime000001");
+        var resultado = await _controller.GetFunkosPorCategoria("VQGCKyvzIM4");
 
         // Assert
         resultado.Result.Should().BeOfType<OkObjectResult>()
@@ -62,17 +62,17 @@ public class CassandraControllerTests {
         // Arrange
         IReadOnlyList<FunkoPorProveedorCategoriaDto> funkos = [new() {
             ProveedorId = "proveedor-1",
-            CategoriaId = "Anime000001",
+            CategoriaId = "VQGCKyvzIM4",
             FunkoId = 42,
             Nombre = "Kirito"
         }];
         _service.Setup(service => service.GetFunkosPorProveedorCategoria(
-                "proveedor-1", "Anime000001"))
+                "proveedor-1", "VQGCKyvzIM4"))
             .ReturnsAsync(funkos);
 
         // Act
         var resultado = await _controller.GetFunkosPorProveedorCategoria(
-            "proveedor-1", "Anime000001");
+            "proveedor-1", "VQGCKyvzIM4");
 
         // Assert
         resultado.Result.Should().BeOfType<OkObjectResult>()

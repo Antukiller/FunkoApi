@@ -8,7 +8,7 @@
 | Tests .NET unitarios e integración | `dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj` |
 | Solo unitarios | `dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Unit"` |
 | Solo integración | `dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Integration"` |
-| Colección Bruno | `.\Run-Bruno.ps1` |
+| Colección Bruno | `.\Start.ps1 -Bruno` |
 
 Ejecuta estos comandos desde la raíz, donde están los scripts y el archivo
 `FunkoApiV.2.slnx`.
@@ -25,7 +25,7 @@ Ejecuta estos comandos desde la raíz, donde están los scripts y el archivo
 Para arrancar dependencias y API en desarrollo en otra terminal:
 
 ```powershell
-.\Start-Development.ps1
+.\Start.ps1
 ```
 
 El puerto predeterminado es `5798`; se puede cambiar con `-Port`. Si se usa otro
@@ -78,7 +78,7 @@ marca una excepción.
 - **Docker no disponible:** inicia Docker Desktop y repite.
 - **Bruno no encontrado:** comprueba `bru --version` o instala Bruno CLI desde
   la página oficial.
-- **API no responde:** arráncala con `.\Start-Development.ps1` y comprueba
+- **API no responde:** arráncala con `.\Start.ps1` y comprueba
   `http://localhost:5798/api/funkos?page=0&size=1`.
 - **401 en Bruno:** verifica las credenciales de una cuenta ADMIN de Development.
 - **DLL bloqueada:** detén la instancia de la API antes de compilar el proyecto.

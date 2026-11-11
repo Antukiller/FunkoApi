@@ -35,7 +35,7 @@ public class CassandraMapperTests {
     public void ToDto_desdeCategoria_mapeaTodosLosCampos() {
         // Arrange
         var modelo = new FunkosPorCategoria {
-            CategoriaId = "Anime000001",
+            CategoriaId = "VQGCKyvzIM4",
             FunkosId = 42,
             Nombre = "Kirito",
             Stock = 8,
@@ -60,7 +60,7 @@ public class CassandraMapperTests {
         // Arrange
         var modelo = new FunkoPorProveedorCategoria {
             ProveedorId = "proveedor-1",
-            CategoriaId = "Anime000001",
+            CategoriaId = "VQGCKyvzIM4",
             FunkosId = 42,
             Nombre = "Kirito",
             ProveedorNombre = "Acme",

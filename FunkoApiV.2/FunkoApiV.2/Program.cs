@@ -59,13 +59,39 @@ public class Program {
         builder.Services.AddGraphQLConfig(builder.Environment);
 
         builder.Services.AddOpenApi();
-        builder.Services.AddRealtimeSignalR();
-        builder.Services.AddCustomCors(builder.Configuration);
+        builder.Services.AddRealtimeSignalR(builder.Environment.IsDevelopment());
+        builder.Services.AddCustomCors(builder.Configuration, builder.Environment.IsDevelopment());
         builder.Services.AddSwaggerGen(options => {
             options.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo {
                 Title = "Funko API",
                 Version = "v1",
-                Description = "API REST para autenticación, Funkos, categorías, proveedores y consultas de Cassandra."
+                Description = """
+                    API REST para gestionar Funkos, categorías, proveedores y autenticación.
+
+                    **Cómo probarla:** inicia sesión en `POST /api/auth/login`, copia el valor de `token`
+                    y pulsa **Authorize**. Pega el token sin escribir el prefijo `Bearer`.
+                    Las operaciones protegidas indican si requieren el rol `ADMIN`.
+
+                    **Grupos:** Autenticación, Funkos, Categorías, Proveedores y Consultas Cassandra.
+                    Los códigos de respuesta y los modelos se describen en cada operación.
+
+                    **Otros canales:** GraphQL se sirve en `/graphql` (explorador solo en Development);
+                    SignalR usa `/hubs/funkos` (cliente de demo en `/`, solo en Development).
+                    No son operaciones REST y no aparecen en este documento.
+                    Consulta `doc/22-presentacion.md` para el recorrido de demostración.
+                    """
+            });
+            options.TagActionsBy(apiDescription => {
+                var controller = apiDescription.ActionDescriptor.RouteValues["controller"];
+                var tag = controller switch {
+                    "Auth" => "Autenticación",
+                    "Funko" => "Funkos",
+                    "Categoria" => "Categorías",
+                    "Proveedor" => "Proveedores",
+                    "Cassandra" => "Consultas Cassandra",
+                    _ => controller ?? "API"
+                };
+                return new[] { tag };
             });
             var xmlFile = $"{typeof(Program).Assembly.GetName().Name}.xml";
             options.IncludeXmlComments(System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile));
@@ -131,7 +157,10 @@ public class Program {
         if (app.Environment.IsDevelopment()) {
             app.UseSwagger();
             app.UseSwaggerUI(options =>
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", "Funko API v1"));
+            {
+                options.DocumentTitle = "FunkoApi — Documentación REST";
+                options.SwaggerEndpoint("/swagger/v1/swagger.json", "Funko API v1");
+            });
         }
 
         // 9. Inicializar esquemas y, solo en desarrollo, cargar datos de ejemplo.
@@ -152,8 +181,10 @@ public class Program {
                 await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
                 await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
             } else {
-                await ProductionDataCleaner.ClearAsync(db, cassandraSession, logger);
-                await IdentitySeeder.EnsureRolesAsync(scope.ServiceProvider, logger);
+                await IdentitySeeder.EnsureProductionAdminAsync(
+                    scope.ServiceProvider,
+                    app.Configuration,
+                    logger);
             }
 
             if (!app.Environment.IsDevelopment()) {
@@ -180,6 +211,11 @@ public class Program {
             app.MapControllers();
             app.MapHub<FunkosHub>("/hubs/funkos").RequireAuthorization();
             app.MapGraphQLEndpoints();
+            if (app.Environment.IsDevelopment()) {
+                app.MapGet("/", () => TypedResults.PhysicalFile(
+                    System.IO.Path.Combine(app.Environment.ContentRootPath, "Demo", "index.html"),
+                    "text/html"));
+            }
 
             await app.RunAsync();
         }

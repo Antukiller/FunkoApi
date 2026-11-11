@@ -26,6 +26,5 @@ cabeceras o políticas de Output Cache.
 ## Reinicio y borrado
 
 Redis usa `localhost:6379` en Development y el host `redis` en Compose. El
-cleaner Production elimina las claves con prefijos `funko:*`, `categoria:*` y
-`proveedor:*` en cada arranque. No implica vaciar todas las claves Redis del
-servidor.
+arranque no vacía la caché en ningún entorno: las entradas expiran por TTL o se
+invalidan al modificar el recurso correspondiente.

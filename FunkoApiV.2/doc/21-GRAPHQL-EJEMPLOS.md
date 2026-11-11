@@ -2,7 +2,7 @@
 
 ## Abrir el explorador visual
 
-1. Arranca la API en Development con `.\Start-Development.ps1` desde la raíz.
+1. Arranca la API en Development con `.\Start.ps1` desde la raíz.
 2. Comprueba que aparece `Now listening on: http://localhost:5798`.
 3. Abre <http://localhost:5798/graphql>.
 4. Escribe la operación GraphQL en el editor y, si corresponde, añade variables
@@ -44,26 +44,46 @@ mantener la conexión abierta.
 
 ## Consultas
 
-### Listar todos los Funkos
+### Listar Funkos por página y filtros
 
-No tiene variables:
+`funkos` es la consulta paginada. Variables: `page` (`Int`, empieza en 1), `size`
+(`Int`, máximo 100) y filtros opcionales `nombre`, `categoriaId`,
+`proveedorId`, `precioMin`, `precioMax`, `stockMin`, `sortBy`, `direction` e
+`includeDeleted`.
 
 ```graphql
-query {
-  funkos {
-    id
-    name
-    precio
-    stock
-    imagen
-    categoria
-    categoriaId
-    proveedorId
-    createdAt
-    updatedAt
+query Funkos($page: Int!, $size: Int!, $categoriaId: String) {
+  funkos(page: $page, size: $size, categoriaId: $categoriaId) {
+    items {
+      id
+      name
+      precio
+      stock
+      categoria
+      categoriaId
+      proveedorId
+    }
+    totalCount
+    page
+    pageSize
+    totalPages
+    hasNextPage
+    hasPreviousPage
   }
 }
 ```
+
+```json
+{
+  "page": 1,
+  "size": 10,
+  "categoriaId": "VQGCKyvzIM4"
+}
+```
+
+`funkos` usa la misma consulta paginada que `GET /api/funkos`: no descarga la
+tabla completa. Si no indicas `page` y `size`, devuelve la primera página de 10
+elementos.
 
 ### Buscar un Funko por ID
 
@@ -89,39 +109,6 @@ query FunkoPorId($id: Long!) {
 ```json
 {
   "id": 1
-}
-```
-
-### Listar Funkos por página
-
-Variables: `page` (`Int`, empieza en 1) y `size` (`Int`, máximo 100).
-
-```graphql
-query FunkosPaginados($page: Int!, $size: Int!) {
-  funkosPaged(page: $page, size: $size) {
-    items {
-      id
-      name
-      precio
-      stock
-      categoria
-      categoriaId
-      proveedorId
-    }
-    totalCount
-    page
-    pageSize
-    totalPages
-    hasNextPage
-    hasPreviousPage
-  }
-}
-```
-
-```json
-{
-  "page": 1,
-  "size": 10
 }
 ```
 
@@ -174,7 +161,7 @@ query CategoriaPorId($id: String!) {
 
 ```json
 {
-  "id": "Peliculas01"
+  "id": "TcMBFSGVi1c"
 }
 ```
 
@@ -210,7 +197,7 @@ mutation CrearFunko($input: CreateFunkoInput!) {
     "precio": 19.99,
     "stock": 5,
     "imagen": "https://ejemplo.com/funko.png",
-    "categoriaId": "Peliculas01",
+    "categoriaId": "TcMBFSGVi1c",
     "proveedorId": "672f1a8b3c9d4e5f6a7b8c9d"
   }
 }
@@ -244,7 +231,7 @@ mutation ActualizarFunko($id: Long!, $input: UpdateFunkoInput!) {
     "precio": 20.5,
     "stock": 8,
     "imagen": "https://ejemplo.com/funko-actualizado.png",
-    "categoriaId": "Peliculas01",
+    "categoriaId": "TcMBFSGVi1c",
     "proveedorId": "672f1a8b3c9d4e5f6a7b8c9d"
   }
 }
@@ -357,7 +344,7 @@ Cada suscripción recibe solo eventos futuros; no devuelve eventos anteriores ni
 | Operación | Variable(s) |
 |---|---|
 | `funkoById` | `id: Long!` |
-| `funkosPaged` | `page: Int`, `size: Int` |
+| `funkos` | `page: Int`, `size: Int`, `nombre`, `categoriaId`, `proveedorId`, `precioMin`, `precioMax`, `stockMin`, `sortBy`, `direction`, `includeDeleted` |
 | `categoriasPaged` | `page: Int`, `size: Int` |
 | `categoriaById` | `id: String!` |
 | `crearFunko` | `input: CreateFunkoInput!` (`name`, `precio`, `stock`, `categoriaId`, `proveedorId`, `imagen`) |
