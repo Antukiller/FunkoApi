@@ -145,16 +145,15 @@ public class Program {
             await db.Database.EnsureCreatedAsync();
             await PostgresSchemaInitializer.EnsureSchemaAsync(db);
 
-            // Datos de negocio (categorías, proveedores, funkos)
-            await DbSeeder.SeedAsync(db, dbMongo, logger);
-            // Datos de negocio (categorías, proveedores, funkos)
-            await DbSeeder.SeedAsync(db, dbMongo, logger);
-
-            // Read model de Cassandra (se reconstruye desde Postgres + Mongo)
-            await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
-
-            // Roles y usuarios de Identity (contraseña hasheada correctamente)
+            // Roles y usuarios de Identity (esto SIEMPRE, para poder loguearte en prod)
             await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
+
+            // Datos de prueba (funkos, categorías, proveedores): SOLO EN DESARROLLO
+            if (app.Environment.IsDevelopment()) {
+                await DbSeeder.SeedAsync(db, dbMongo, logger);
+                await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
+            }
+        }
 
             if (!app.Environment.IsDevelopment()) {
                 app.Use(async (context, next) => {
@@ -182,6 +181,5 @@ public class Program {
             app.MapGraphQLEndpoints();
 
             await app.RunAsync();
-        }
     }
 }
