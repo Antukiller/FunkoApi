@@ -23,10 +23,11 @@ Los comandos se ejecutan **desde la raíz del repositorio**, donde está
 | `.\Start.ps1 -Port 5800` | Desarrollo en otro puerto |
 | `.\Start.ps1 -ResetData` | Borra volúmenes y vuelve a sembrar |
 | `.\Start.ps1 -Bruno` | Flujo completo de desarrollo + Bruno |
+| `.\Start.ps1 -Down` | Detiene los contenedores de desarrollo sin borrar datos |
 | `.\Start.ps1 -Production` | Producción en 5197 |
 | `.\Start.ps1 -Production -Build` | Reconstruye la imagen |
 | `.\Start.ps1 -Production -Logs` | Sigue los logs del backend |
-| `.\Start.ps1 -Production -Down` | Para los contenedores sin borrar datos |
+| `.\Start.ps1 -Production -Down` | Detiene los contenedores de producción sin borrar datos |
 | `.\Start.ps1 -Production -InitEnv` | Genera `.env.production` con secretos |
 | `.\Test-All.ps1` | `dotnet test` + Bruno |
 
@@ -36,6 +37,30 @@ Cuando la API esté escuchando:
 - GraphQL: <http://localhost:5798/graphql> (explorador solo Development)
 - Demo SignalR: <http://localhost:5798/> (requiere cuenta ADMIN)
 - Mailpit: <http://localhost:8025>
+
+## Pruebas y cobertura
+
+Desde la raíz del repositorio:
+
+```powershell
+.\Start.ps1 -Bruno            # solo Bruno: bases + API + colección
+
+.\Test-All.ps1                # todos los tests .NET + Bruno
+
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj `
+  --settings .\FunkoApiV.2\coverage.runsettings `
+  --collect:"XPlat Code Coverage"
+
+reportgenerator `
+  -reports:".\FunkoApiV.2\FunkoApiV2Test\TestResults\**\coverage.cobertura.xml" `
+  -targetdir:".\FunkoApiV.2\coveragereport" `
+  -reporttypes:"Html;TextSummary"
+```
+
+El informe queda en `FunkoApiV.2\coveragereport\index.html`. El paso a paso,
+los filtros por tipo de test y los requisitos están en
+[la guía de pruebas .NET](doc/18-testing.md) y en
+[la guía de Bruno](doc/20-bruno-testing.md).
 
 ## Qué incluye el proyecto
 

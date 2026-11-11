@@ -67,6 +67,25 @@ las pide sin escribirlas en la colección. Para un puerto distinto:
 .\Test-All.ps1 -BaseUrl http://localhost:5800
 ```
 
+`Test-All.ps1` **no recoge cobertura**. Para tener tests .NET con cobertura y
+después Bruno, ejecuta en este orden:
+
+```powershell
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj `
+  --settings .\FunkoApiV.2\coverage.runsettings `
+  --collect:"XPlat Code Coverage"
+
+.\Start.ps1 -Bruno
+
+reportgenerator `
+  -reports:".\FunkoApiV.2\FunkoApiV2Test\TestResults\**\coverage.cobertura.xml" `
+  -targetdir:".\FunkoApiV.2\coveragereport" `
+  -reporttypes:"Html;TextSummary"
+```
+
+El informe HTML queda en `FunkoApiV.2\coveragereport\index.html`. El detalle de
+la cobertura está en [Pruebas .NET y cobertura](18-testing.md).
+
 Las pruebas de integración .NET usan Testcontainers. Si una compilación informa
 que `FunkoApiV.2.dll` está bloqueada, detén la instancia de la API con `Ctrl+C`,
 vuelve a ejecutar las pruebas y arranca la API de nuevo antes de correr solo

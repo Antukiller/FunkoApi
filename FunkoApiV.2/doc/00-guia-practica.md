@@ -19,12 +19,14 @@ delega en los demás según el modo.
 | `.\Start.ps1 -Production` | Producción: bases + backend en `http://localhost:5197` |
 | `.\Start.ps1 -Production -Build` | Reconstruye la imagen antes de arrancar |
 | `.\Start.ps1 -Production -Logs` | Sigue los logs del backend |
-| `.\Start.ps1 -Production -Down` | Para los contenedores sin borrar datos |
+| `.\Start.ps1 -Down` | Detiene los contenedores de desarrollo sin borrar datos |
+| `.\Start.ps1 -Production -Down` | Detiene los contenedores de producción sin borrar datos |
 | `.\Start.ps1 -Production -InitEnv` | Crea `.env.production` con secretos aleatorios |
 | `.\Test-All.ps1` | `dotnet test` + colección Bruno |
 
-`Start.ps1` rechaza combinaciones incoherentes, como `-Production -Bruno` o
-`-Production -ResetData`: producción nunca borra datos.
+`Start.ps1` rechaza combinaciones incoherentes, como `-Production -Bruno`,
+`-Production -ResetData` o `-Down -ResetData`: producción nunca borra datos y
+parar contenedores tampoco.
 
 ## 2. Primera vez en este equipo
 
@@ -43,7 +45,7 @@ docker info
 .\Start.ps1
 ```
 
-En el primer arranque, `Start-Development.ps1` crea `FunkoApiV.2\.env`
+En el primer arranque, `Start-Development.ps1` crea `FunkoApiV.2\FunkoApiV.2\.env`
 copiando `.env.example`. Ese fichero contiene valores locales de ejemplo, no
 secretos de producción. No lo subas al repositorio.
 
@@ -139,6 +141,19 @@ Production. Las suscripciones usan WebSocket en `/graphql` y SignalR usa
 
 ## 6. Ejecutar pruebas
 
+Todos los comandos de esta sección se ejecutan desde la raíz del repositorio,
+donde está `Start.ps1`.
+
+| Quiero... | Comando |
+|---|---|
+| Todos los tests .NET | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj` |
+| Solo unitarios | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Unit"` |
+| Solo integración | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Integration"` |
+| .NET con cobertura | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj --settings .\FunkoApiV.2\coverage.runsettings --collect:"XPlat Code Coverage"` |
+| .NET + Bruno | `.\Test-All.ps1` |
+| Solo Bruno | `.\Start.ps1 -Bruno` |
+| Informe HTML de cobertura | `reportgenerator -reports:".\FunkoApiV.2\FunkoApiV2Test\TestResults\**\coverage.cobertura.xml" -targetdir:".\FunkoApiV.2\coveragereport" -reporttypes:"Html;TextSummary"` |
+
 ### Suite completa (.NET + Bruno)
 
 Deja Docker Desktop iniciado. Desde la raíz:
@@ -154,16 +169,47 @@ guardarlas en el repositorio.
 ### Solo pruebas .NET
 
 ```powershell
-dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj
 ```
 
 Solo unitarias:
 
 ```powershell
-dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Unit"
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Unit"
 ```
 
 Las de integración crean sus propios contenedores y necesitan Docker.
+
+### Cobertura de código
+
+Los tests .NET pueden medir cobertura sin cambiar el proyecto. Genera el XML:
+
+```powershell
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj `
+  --settings .\FunkoApiV.2\coverage.runsettings `
+  --collect:"XPlat Code Coverage"
+```
+
+Cada ejecución deja `coverage.cobertura.xml` en una carpeta nueva de
+`FunkoApiV.2\FunkoApiV2Test\TestResults\`. Después genera el informe HTML:
+
+```powershell
+reportgenerator `
+  -reports:".\FunkoApiV.2\FunkoApiV2Test\TestResults\**\coverage.cobertura.xml" `
+  -targetdir:".\FunkoApiV.2\coveragereport" `
+  -reporttypes:"Html;TextSummary"
+```
+
+Abre `FunkoApiV.2\coveragereport\index.html`. Si `reportgenerator` no existe en
+el equipo, instálalo una vez:
+
+```powershell
+dotnet tool install --global dotnet-reportgenerator-globaltool
+```
+
+Si quieres cobertura y Bruno en la misma sesión, ejecuta el comando de cobertura,
+luego `.\Start.ps1 -Bruno` y, al terminar, `reportgenerator`. El detalle está en
+[Pruebas .NET y cobertura](18-testing.md).
 
 ### Solo Bruno
 
@@ -204,7 +250,7 @@ Diferencias que conviene tener claras:
 ## 8. Producción con un solo comando
 
 Producción usa su propio fichero de secretos, `.env.production` (no lo
-commitees), y el Compose de `FunkoApiV.2\compose.yaml`.
+commitees), y el Compose de `FunkoApiV.2\FunkoApiV.2\compose.yaml`.
 
 ### Primera vez
 
@@ -266,7 +312,7 @@ Si el volumen ya existía con otra contraseña, el backend no puede conectar.
 Para conservar los datos, cambia la contraseña dentro de Postgres:
 
 ```powershell
-$password = (Select-String -Path '.\FunkoApiV.2\.env.production' `
+$password = (Select-String -Path '.\FunkoApiV.2\FunkoApiV.2\.env.production' `
   -Pattern '^POSTGRES_PASSWORD=(.+)$').Matches[0].Groups[1].Value
 docker exec funkoapi_postgres psql -U postgres -d postgres `
   -c "ALTER USER postgres WITH PASSWORD '$password';"
@@ -281,11 +327,12 @@ volumen. Borrar el volumen (`down -v`) aplica la nueva, pero pierde los datos.
 ### `compose.yaml` no encontrado
 
 Ejecuta los scripts desde la raíz. El Compose está en
-`FunkoApiV.2\compose.yaml`; no dupliques `FunkoApiV.2` en la ruta.
+`FunkoApiV.2\FunkoApiV.2\compose.yaml`: el proyecto de la API es la carpeta
+interna, por eso `FunkoApiV.2` aparece dos veces.
 
 ### `POSTGRES_PASSWORD` o `JWT_KEY` no definidos
 
-En desarrollo, `Start-Development.ps1` crea `FunkoApiV.2\.env` desde la
+En desarrollo, `Start-Development.ps1` crea `FunkoApiV.2\FunkoApiV.2\.env` desde la
 plantilla. En producción, usa `.\Start.ps1 -Production -InitEnv` y revisa
 `.env.production`. Compose valida las variables de todos los servicios aunque
 solo levantes las bases.
@@ -323,14 +370,22 @@ administrador.
 
 ## 10. Apagar servicios
 
-`Ctrl+C` detiene la API. Para parar solo los almacenes de desarrollo:
+`Ctrl+C` detiene la API. Para parar además los contenedores de desarrollo:
 
 ```powershell
-docker compose --env-file .\FunkoApiV.2\.env `
-  -f .\FunkoApiV.2\compose.yaml stop db mongo_db cassandra redis
+.\Start.ps1 -Down
 ```
 
-Para el stack completo, consulta [Docker](19-docker.md).
+Los volúmenes se conservan: al volver a arrancar, los datos siguen ahí. No uses
+`docker compose down -v` salvo que quieras borrarlos.
+
+Para el stack de producción:
+
+```powershell
+.\Start.ps1 -Production -Down
+```
+
+Para el detalle de Compose, consulta [Docker](19-docker.md).
 
 ## Mapa de apuntes técnicos
 

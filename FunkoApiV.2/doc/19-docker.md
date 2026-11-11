@@ -1,7 +1,8 @@
 # 19 — Docker: desarrollo y producción
 
-El Compose de referencia está en `FunkoApiV.2/compose.yaml`; todos los comandos
-de esta guía se ejecutan desde la **raíz del repositorio**.
+Los scripts están en `FunkoApiV.2\` y el proyecto de la API, con `compose.yaml`
+y `.env`, en `FunkoApiV.2\FunkoApiV.2\`. Todos los comandos de esta guía se
+ejecutan desde la **raíz del repositorio**.
 
 ## 1. Servicios del Compose
 
@@ -29,27 +30,33 @@ usar Hot Reload y el depurador sin reconstruir la imagen.
 `Start-Development.ps1`:
 
 1. Comprueba Docker.
-2. Crea `FunkoApiV.2\.env` desde `.env.example` si falta.
+2. Crea `FunkoApiV.2\FunkoApiV.2\.env` desde `.env.example` si falta.
 3. Levanta `db`, `mongo_db`, `cassandra`, `redis` y Mailpit con `--wait`.
 4. Arranca la API en Development en el puerto 5798.
 
 La API queda en primer plano; deténla con `Ctrl+C`. Mailpit está en
-<http://localhost:8025>.
+<http://localhost:8025>. Para parar también los contenedores:
+
+```powershell
+.\Start.ps1 -Down
+```
+
+Los volúmenes se conservan.
 
 Si solo quieres los almacenes:
 
 ```powershell
-docker compose --env-file .\FunkoApiV.2\.env `
-  --profile development -f .\FunkoApiV.2\compose.yaml `
+docker compose --env-file .\FunkoApiV.2\FunkoApiV.2\.env `
+  --profile development -f .\FunkoApiV.2\FunkoApiV.2\compose.yaml `
   up -d db mongo_db cassandra redis mailpit
 
-docker compose --env-file .\FunkoApiV.2\.env `
-  --profile development -f .\FunkoApiV.2\compose.yaml `
+docker compose --env-file .\FunkoApiV.2\FunkoApiV.2\.env `
+  --profile development -f .\FunkoApiV.2\FunkoApiV.2\compose.yaml `
   stop db mongo_db cassandra redis mailpit
 ```
 
 Compose valida las variables de todos los servicios, incluido `backend`, aunque
-solo levantes las bases. Por eso necesita que exista `FunkoApiV.2\.env`.
+solo levantes las bases. Por eso necesita que exista `FunkoApiV.2\FunkoApiV.2\.env`.
 
 ## 3. Producción con un solo comando
 
@@ -118,14 +125,14 @@ nunca como efecto colateral de arrancar la API.
 
 ## 5. Configuración de conexión
 
-- `FunkoApiV.2/appsettings.json`: valores compartidos.
-- `FunkoApiV.2/appsettings.Development.json`: `localhost`, Cassandra en 9043 y
-  clave JWT local.
-- `FunkoApiV.2/appsettings.Production.json`: hostnames Docker (`db`,
+- `FunkoApiV.2\FunkoApiV.2\appsettings.json`: valores compartidos.
+- `FunkoApiV.2\FunkoApiV.2\appsettings.Development.json`: `localhost`, Cassandra
+  en 9043 y clave JWT local.
+- `FunkoApiV.2\FunkoApiV.2\appsettings.Production.json`: hostnames Docker (`db`,
   `mongo_db`, `redis`, `cassandra`).
-- `FunkoApiV.2/.env`: variables de desarrollo.
-- `FunkoApiV.2/.env.production`: secretos de producción. No lo commitees;
-  añádelo a `.gitignore` si todavía no está excluido.
+- `FunkoApiV.2\FunkoApiV.2\.env`: variables de desarrollo.
+- `FunkoApiV.2\FunkoApiV.2\.env.production`: secretos de producción. No lo
+  commitees; añádelo a `.gitignore` si todavía no está excluido.
 
 Las variables de entorno prevalecen sobre JSON. Compose transforma `JWT_KEY` en
 `Jwt__Key`, usa `POSTGRES_PASSWORD` para PostgreSQL y el backend, y convierte
@@ -139,7 +146,7 @@ Las variables de entorno prevalecen sobre JSON. Compose transforma `JWT_KEY` en
 los datos, cambia la contraseña dentro de Postgres:
 
 ```powershell
-$password = (Select-String -Path '.\FunkoApiV.2\.env.production' `
+$password = (Select-String -Path '.\FunkoApiV.2\FunkoApiV.2\.env.production' `
   -Pattern '^POSTGRES_PASSWORD=(.+)$').Matches[0].Groups[1].Value
 docker exec funkoapi_postgres psql -U postgres -d postgres `
   -c "ALTER USER postgres WITH PASSWORD '$password';"
@@ -156,7 +163,7 @@ Suele ser una imagen antigua. Reconstruye con
 
 ### Variables requeridas ausentes
 
-En desarrollo, `Start-Development.ps1` crea `FunkoApiV.2\.env`. En producción,
+En desarrollo, `Start-Development.ps1` crea `FunkoApiV.2\FunkoApiV.2\.env`. En producción,
 usa `-InitEnv` y revisa `.env.production`.
 
 ### Puerto ocupado
@@ -174,21 +181,23 @@ crean sus propios contenedores con Testcontainers.
 
 ### `compose.yaml` no encontrado
 
-Está en `.\FunkoApiV.2\compose.yaml`; ejecuta los scripts desde la raíz.
+Está en `.\FunkoApiV.2\FunkoApiV.2\compose.yaml`; ejecuta los scripts desde la raíz.
+La carpeta interna es el proyecto de la API, por eso `FunkoApiV.2` aparece dos
+veces en la ruta.
 
 ## 7. Comandos Compose equivalentes
 
 Si necesitas depurar a mano:
 
 ```powershell
-docker compose --env-file .\FunkoApiV.2\.env.production `
-  -f .\FunkoApiV.2\compose.yaml up -d --wait
+docker compose --env-file .\FunkoApiV.2\FunkoApiV.2\.env.production `
+  -f .\FunkoApiV.2\FunkoApiV.2\compose.yaml up -d --wait
 
-docker compose --env-file .\FunkoApiV.2\.env.production `
-  -f .\FunkoApiV.2\compose.yaml logs -f backend
+docker compose --env-file .\FunkoApiV.2\FunkoApiV.2\.env.production `
+  -f .\FunkoApiV.2\FunkoApiV.2\compose.yaml logs -f backend
 
-docker compose --env-file .\FunkoApiV.2\.env.production `
-  -f .\FunkoApiV.2\compose.yaml down
+docker compose --env-file .\FunkoApiV.2\FunkoApiV.2\.env.production `
+  -f .\FunkoApiV.2\FunkoApiV.2\compose.yaml down
 ```
 
 Para el paso a paso general, consulta [la guía práctica](00-guia-practica.md).

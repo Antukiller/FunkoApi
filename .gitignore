@@ -11,6 +11,8 @@ out/
 
 # Archivos temporales o locales
 .env
+.env.*
+!.env.example
 *.user
 *.suo
 *.userprefs
@@ -32,6 +34,9 @@ artifacts/
 publish/
 TestResults/
 BenchmarkDotNet.Artifacts/
+
+# Informe de cobertura generado
+coveragereport/
 
 # Archivos específicos de Visual Studio
 *.csproj.user

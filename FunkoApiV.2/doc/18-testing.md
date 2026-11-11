@@ -2,16 +2,19 @@
 
 ## 1. Qué ejecutar según lo que quieras comprobar
 
+Todos los comandos se ejecutan **desde la raíz del repositorio**, donde está
+`Start.ps1`. Las rutas de los proyectos incluyen la carpeta `FunkoApiV.2`, que
+es la que contiene la solución `FunkoApiV.2.slnx` y el proyecto de tests.
+
 | Necesidad | Comando |
 |---|---|
 | Suite completa .NET + Bruno | `.\Test-All.ps1` |
-| Tests .NET unitarios e integración | `dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj` |
-| Solo unitarios | `dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Unit"` |
-| Solo integración | `dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Integration"` |
+| Tests .NET unitarios e integración | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj` |
+| Solo unitarios | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Unit"` |
+| Solo integración | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj --filter "FullyQualifiedName~Integration"` |
+| Tests .NET con cobertura | `dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj --settings .\FunkoApiV.2\coverage.runsettings --collect:"XPlat Code Coverage"` |
 | Colección Bruno | `.\Start.ps1 -Bruno` |
-
-Ejecuta estos comandos desde la raíz, donde están los scripts y el archivo
-`FunkoApiV.2.slnx`.
+| .NET con cobertura + Bruno | Los dos comandos anteriores en ese orden (ver apartado 4.3) |
 
 ## 2. Requisitos
 
@@ -56,15 +59,85 @@ esté activa, pero sí Docker Desktop.
 
 ## 4. Cobertura
 
+### 4.1. Generar el XML
+
+Ejecuta todos los tests .NET con el colector de cobertura y el RunSettings del
+repositorio:
+
 ```powershell
-dotnet test .\FunkoApiV2Test\FunkoApiV2Test.csproj `
-  --settings .\coverage.runsettings `
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj `
+  --settings .\FunkoApiV.2\coverage.runsettings `
   --collect:"XPlat Code Coverage"
 ```
 
-El XML de cobertura se genera dentro de
-`FunkoApiV2Test\TestResults`. `coverage.runsettings` excluye código generado de
-`obj`.
+Cada ejecución crea una carpeta nueva en
+`FunkoApiV.2\FunkoApiV2Test\TestResults\<guid>\` con el fichero
+`coverage.cobertura.xml`. `TestResults/` está ignorado por git, así que no se
+sube al repositorio.
+
+Si solo quieres medir los tests unitarios (más rápido y sin Docker):
+
+```powershell
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj `
+  --filter "FullyQualifiedName~Unit" `
+  --settings .\FunkoApiV.2\coverage.runsettings `
+  --collect:"XPlat Code Coverage"
+```
+
+### 4.2. Informe HTML
+
+Instala la herramienta una sola vez por equipo:
+
+```powershell
+dotnet tool install --global dotnet-reportgenerator-globaltool
+```
+
+Genera el informe a partir de todos los XML acumulados:
+
+```powershell
+reportgenerator `
+  -reports:".\FunkoApiV.2\FunkoApiV2Test\TestResults\**\coverage.cobertura.xml" `
+  -targetdir:".\FunkoApiV.2\coveragereport" `
+  -reporttypes:"Html;TextSummary"
+```
+
+Abre `FunkoApiV.2\coveragereport\index.html` en el navegador. El resumen en
+texto queda en `Summary.txt`, dentro de esa misma carpeta. `coveragereport/` es
+un artefacto generado: no lo commitees.
+
+### 4.3. Cobertura y Bruno en la misma sesión
+
+`Test-All.ps1` ejecuta `dotnet test` y después Bruno, pero **no recoge
+cobertura**. Para tener las tres cosas, ejecuta en este orden:
+
+```powershell
+# 1. Tests .NET con cobertura
+dotnet test .\FunkoApiV.2\FunkoApiV2Test\FunkoApiV2Test.csproj `
+  --settings .\FunkoApiV.2\coverage.runsettings `
+  --collect:"XPlat Code Coverage"
+
+# 2. Bruno: levanta las bases y la API, ejecuta la colección y apaga la API
+.\Start.ps1 -Bruno
+
+# 3. Informe HTML con los XML generados
+reportgenerator `
+  -reports:".\FunkoApiV.2\FunkoApiV2Test\TestResults\**\coverage.cobertura.xml" `
+  -targetdir:".\FunkoApiV.2\coveragereport" `
+  -reporttypes:"Html;TextSummary"
+```
+
+Si la API ya está arrancada en `http://localhost:5798`, puedes saltarte el paso
+2 y lanzar solo la colección:
+
+```powershell
+Push-Location .\FunkoApiV.2\Bruno
+bru run -r --env-file .\environments\Local.bru
+Pop-Location
+```
+
+Las pruebas de integración con Testcontainers suman su cobertura, pero tardan
+más porque crean contenedores. Para una medida rápida, añade
+`--filter "FullyQualifiedName~Unit"` al comando de `dotnet test`.
 
 ## 5. Estilo de tests
 
