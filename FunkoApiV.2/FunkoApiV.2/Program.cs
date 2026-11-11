@@ -145,16 +145,14 @@ public class Program {
             await db.Database.EnsureCreatedAsync();
             await PostgresSchemaInitializer.EnsureSchemaAsync(db);
 
-            // Datos de negocio (categorías, proveedores, funkos)
-            await DbSeeder.SeedAsync(db, dbMongo, logger);
-            // Datos de negocio (categorías, proveedores, funkos)
-            await DbSeeder.SeedAsync(db, dbMongo, logger);
-
-            // Read model de Cassandra (se reconstruye desde Postgres + Mongo)
-            await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
-
-            // Roles y usuarios de Identity (contraseña hasheada correctamente)
-            await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
+            if (app.Environment.IsDevelopment()) {
+                await DbSeeder.SeedAsync(db, dbMongo, logger);
+                await CassandraSeeder.SeedAsync(cassandraSession, db, dbMongo, logger);
+                await IdentitySeeder.SeedAsync(scope.ServiceProvider, logger);
+            } else {
+                await ProductionDataCleaner.ClearAsync(db, cassandraSession, logger);
+                await IdentitySeeder.EnsureRolesAsync(scope.ServiceProvider, logger);
+            }
 
             if (!app.Environment.IsDevelopment()) {
                 app.Use(async (context, next) => {

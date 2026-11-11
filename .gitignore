@@ -10,6 +10,7 @@ out/
 *.DotSettings.user
 
 # Archivos temporales o locales
+.env
 *.user
 *.suo
 *.userprefs

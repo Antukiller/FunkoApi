@@ -105,7 +105,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     [HttpPost("imagen")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<ImagenResponseDto>> UploadImagen([FromForm] IFormFile file) {
+    public async Task<ActionResult<ImagenResponseDto>> UploadImagen(IFormFile file) {
         var result = await ser.UploadImagen(file);
         return result.IsSuccess
             ? Ok(new ImagenResponseDto(result.Value))
@@ -126,7 +126,7 @@ public class FunkoController(IFunkoService ser) : ControllerBase {
     [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     [HttpPatch("{id:long}/imagen")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<FunkoResponseDto>> UpdateImagen(long id, [FromForm] IFormFile file) {
+    public async Task<ActionResult<FunkoResponseDto>> UpdateImagen(long id, IFormFile file) {
         var result = await ser.UpdateImagen(id, file);
         return result.IsSuccess
             ? Ok(result.Value)

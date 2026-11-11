@@ -8,8 +8,8 @@ public static class CorsConfig {
             "http://localhost:5500",
             "http://127.0.0.1:5500",
             "http://localhost:63342",
-            "http://localhost:5197",
-            "http://127.0.0.1:5197"
+            "http://localhost:5798",
+            "http://127.0.0.1:5798"
         };
         var allOrigins = configuredOrigins.Concat(defaultOrigins).Distinct().ToArray();
         services.AddCors(options => {

@@ -1,15 +1,26 @@
-# Probar GraphQL en el navegador
+# 21 — Probar GraphQL
 
-## Abrir el explorador
+## Abrir el explorador visual
 
-1. Inicia la API desde el perfil de desarrollo.
-2. Inicia bruno para obetener el token de autenticacion(http://localhost:5197/api/auth/login)
-3. Abre `http://localhost:5197/graphql` (o `https://localhost:7259/graphql` si usas HTTPS).
-4. En el explorador, escribe una operación en el panel izquierdo y las variables JSON en el panel **Variables**.
+1. Arranca la API en Development con `.\Start-Development.ps1` desde la raíz.
+2. Comprueba que aparece `Now listening on: http://localhost:5798`.
+3. Abre <http://localhost:5798/graphql>.
+4. Escribe la operación GraphQL en el editor y, si corresponde, añade variables
+   JSON en el panel **Variables**.
 
-Los nombres de campos que aparecen aquí usan el formato GraphQL habitual de Hot Chocolate: camelCase. Las consultas de lectura no requieren autenticación. Las mutaciones requieren un token de un usuario con rol `ADMIN`.
+El explorador visual solo se habilita en Development. Las consultas de lectura
+no requieren autenticación; las mutaciones requieren JWT de una cuenta con rol
+`ADMIN`. Los nombres de campos usan camelCase.
 
-Para obtener un token, inicia sesión con una cuenta existente enviando `POST http://localhost:5197/api/auth/login` con este cuerpo:
+## Obtener un JWT para las mutaciones
+
+En Development, la API crea una cuenta de ejemplo `ADMIN` al arrancar si aún no
+existe. Las credenciales están documentadas en
+[la guía práctica](00-guia-practica.md) y definidas por
+`FunkoApiV.2/Seeders/IdentitySeeder.cs`. No son credenciales de producción.
+
+Envía una petición `POST http://localhost:5798/api/auth/login` con el email y
+contraseña de esa cuenta:
 
 ```json
 {
@@ -18,13 +29,18 @@ Para obtener un token, inicia sesión con una cuenta existente enviando `POST ht
 }
 ```
 
-Copia el valor `token` de la respuesta y configúralo en el panel **Headers** del explorador:
+Copia `token` de la respuesta y configúralo en **Headers** del explorador:
 
 ```json
 {
   "Authorization": "Bearer TU_TOKEN"
 }
 ```
+
+Las operaciones GraphQL HTTP se envían a `/graphql`. El endpoint permanece
+disponible en Production, pero el explorador del navegador no; para sus
+operaciones usa un cliente GraphQL. Las suscripciones son WebSocket y requieren
+mantener la conexión abierta.
 
 ## Consultas
 
@@ -266,7 +282,7 @@ mutation ActualizarImagen($id: Long!, $file: Upload!) {
 
 ### Suscripciones: probar en Bruno
 
-Las suscripciones usan WebSocket, no una petición GraphQL normal por HTTP. En Bruno crea una petición **WebSocket** conectada a `ws://localhost:5197/graphql` (o `wss://localhost:7259/graphql` con HTTPS) y envía una de las operaciones de abajo. Déjala conectada; después ejecuta su mutación correspondiente en otra petición GraphQL HTTP de Bruno. Las mutaciones requieren el token de administrador en **Auth/Headers**. Como las notificaciones son en memoria, ejecuta API y suscripción contra la misma instancia del servidor.
+Las suscripciones usan WebSocket, no una petición GraphQL normal por HTTP. En Bruno crea una petición **WebSocket** conectada a `ws://localhost:5798/graphql` (o `wss://localhost:7259/graphql` con HTTPS) y envía una de las operaciones de abajo. Déjala conectada; después ejecuta su mutación correspondiente en otra petición GraphQL HTTP de Bruno. Las mutaciones requieren el token de administrador en **Auth/Headers**. Como las notificaciones son en memoria, ejecuta API y suscripción contra la misma instancia del servidor.
 
 No escribas estas operaciones en una petición `POST` normal: eso solo ejecutaría una vez la operación y no mantendría abierta la conexión para recibir eventos.
 

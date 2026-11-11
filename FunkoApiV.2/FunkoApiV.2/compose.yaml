@@ -8,10 +8,10 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_DB: funkos
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d funkos"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d funkos"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -37,6 +37,8 @@ services:
       - "9043:9042"
     environment:
       - CASSANDRA_CLUSTER_NAME=FunkoCluster
+    volumes:
+      - cassandra_data:/var/lib/cassandra
     networks:
       - funko_net
   # Cache Redis
@@ -47,6 +49,15 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - funko_net
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: funkoapi_mailpit
+    restart: always
+    ports:
+      - "1025:1025"
+      - "8025:8025"
     networks:
       - funko_net
 
@@ -60,9 +71,17 @@ services:
     ports:
       - "5197:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Postgre: "Host=db;Port=5432;Database=funkos;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}"
-      Jwt__Key: ${JWT_KEY:?Define JWT_KEY in .env}
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__Postgre=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
+      - ConnectionStrings__Redis=redis:6379
+      - ConnectionStrings__Mongo=mongodb://mongo_db:27017
+      - Cassandra__Hosts__0=cassandra
+      - Cassandra__Port=9042
+      - Smtp__Host=smtp.gmail.com
+      - Smtp__Port=587
+      - Smtp__Username=oms04081974@gmail.com
+      - Smtp__Password=ersvficvfajtehbc        
+      - Smtp__From=oms04081974@gmail.com
     depends_on:
       db:
         condition: service_healthy
@@ -72,8 +91,11 @@ services:
         condition: service_started
       cassandra:
         condition: service_started
+      mailpit:
+        condition: service_started
     networks:
       - funko_net
+
 networks:
   funko_net:
     driver: bridge
@@ -82,3 +104,4 @@ volumes:
   postgres_data:
   redis_data:
   mongo_data:
+  cassandra_data:

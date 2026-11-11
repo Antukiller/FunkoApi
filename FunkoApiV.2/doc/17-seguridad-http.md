@@ -1,46 +1,67 @@
-# Seguridad HTTP y documentación
+# 17 — Seguridad HTTP, documentación e índices
 
 ## CORS
 
-Los orígenes permitidos se configuran en `Cors:AllowedOrigins`. En desarrollo se
-permiten `localhost:3000` y `localhost:5173`. En producción la lista base está
-vacía; configura los orígenes reales mediante variables de entorno, por ejemplo:
+La política se configura en `Infrastructure/CorsConfig.cs`. Los orígenes
+configurados en `Cors:AllowedOrigins` se combinan con una lista predeterminada
+que actualmente incluye puertos locales y se añade en todos los entornos. Por
+tanto, aunque `appsettings.Production.json` tenga una lista vacía, esa lista no
+elimina los orígenes predeterminados. Antes de desplegar, revisa/corrige este
+comportamiento y configura los orígenes reales, por ejemplo:
 
 ```text
 Cors__AllowedOrigins__0=https://tienda.ejemplo.com
 ```
 
-No uses `*` en producción. Si no se configura ningún origen, las llamadas sin
-CORS (por ejemplo, de servidor a servidor) siguen funcionando, pero el navegador
-no permitirá llamadas cross-origin.
+No uses `*` como sustituto de una lista de orígenes. SignalR requiere credenciales
+de conexión; revisa la política antes de cambiar CORS. Los defaults actuales
+están en `CorsConfig.cs`; los del perfil Development también están en
+`appsettings.Development.json`.
 
 ## Límite de peticiones
 
-Se aplica un límite fijo global por IP: 120 peticiones por cada 60 segundos.
-Se puede ajustar con `RateLimiting__PermitLimit` y
-`RateLimiting__WindowSeconds`. Si la API está detrás de un proxy, configura
-`ForwardedHeaders` solo para proxies de confianza antes de depender de la IP del
-cliente; de lo contrario, el límite puede agrupar a todos los clientes bajo la IP
-del proxy.
+`Program.cs` configura un límite global por dirección IP, por defecto 120
+peticiones por 60 segundos. Se puede ajustar con
+`RateLimiting__PermitLimit` y `RateLimiting__WindowSeconds`. Una petición
+rechazada recibe HTTP 429 y `Retry-After`.
 
-## Headers de seguridad
+Si la API está detrás de un proxy inverso, no confíes automáticamente en
+cabeceras de IP reenviadas: configura únicamente proxies conocidos antes de
+utilizar la IP del cliente para limitar.
 
-En producción se envían CSP (`default-src 'self'`, sin objetos ni marcos),
-`X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy`. Swagger y la
-interfaz visual de GraphQL solo se habilitan en Development.
+## Cabeceras de seguridad
+
+Fuera de Development, el middleware de `Program.cs` añade CSP,
+`X-Content-Type-Options`, `X-Frame-Options` y `Referrer-Policy`. La CSP actual
+restringe recursos a `'self'`; si se sirve documentación visual en otro entorno,
+revisa la política sin debilitarla innecesariamente.
 
 ## Swagger y GraphQL
 
 - Swagger UI: `/swagger`, solo en Development.
 - Documento OpenAPI: `/openapi/v1.json`, solo en Development.
-- GraphQL sigue disponible en `/graphql` en ambos entornos; su interfaz visual
-  se deshabilita en Production. El endpoint WebSocket para suscripciones sigue
-  mapeado.
+- GraphQL HTTP: `/graphql`, mapeado en ambos entornos.
+- Explorador visual GraphQL: habilitado únicamente en Development.
+- GraphQL subscriptions: WebSocket en `/graphql`.
+- SignalR: `/hubs/funkos`, requiere autenticación.
 
-## Índices de PostgreSQL
+## Índices y consultas
 
-El inicializador de esquema crea índices para los filtros/ordenaciones de
-Funkos y activa `pg_trgm` para acelerar búsquedas `ILIKE '%texto%'`. El usuario
-de base de datos que inicia la aplicación debe poder crear esa extensión e
-índices; en producción es preferible aprovisionar `pg_trgm` con permisos de
-administración y ejecutar cambios de esquema mediante migraciones controladas.
+`Infrastructure/PostgresSchemaInitializer.cs` crea la extensión `pg_trgm` e
+índices para IDs relacionados, precio, stock, nombre, fecha y búsquedas por
+trigramas sobre nombres activos. La base debe permitir crear la extensión y los
+índices en una inicialización nueva. Los índices parciales excluyen registros
+eliminados.
+
+Antes de añadir índices, comprueba los filtros/ordenaciones existentes y el plan
+de ejecución de consultas con datos representativos. Evita índices redundantes
+y cambios de esquema no compatibles con instalaciones que ya tienen tablas.
+
+## Estado de capacidades solicitadas
+
+- CORS, rate limiting, cabeceras CSP/seguridad, Swagger, GraphQL y SignalR:
+  configurados en el código actual.
+- Redis: caché de aplicación; no hay Output Cache HTTP configurado.
+- Envío de emails: no está implementado.
+- Producción: el cleaner de inicio elimina datos; revisa
+  [Docker](19-docker.md) antes de desplegar.

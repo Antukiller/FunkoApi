@@ -11,17 +11,10 @@ namespace FunkoApiV._2.Seeders;
 
 public static class IdentitySeeder {
     public static async Task SeedAsync(IServiceProvider scopeServices, ILogger logger) {
+        await EnsureRolesAsync(scopeServices, logger);
+
         var roleManager = scopeServices.GetRequiredService<RoleManager<IdentityRole<long>>>();
         var userManager = scopeServices.GetRequiredService<UserManager<AppUser>>();
-
-        // ── Roles ──
-        string[] roles = ["ADMIN", "USER"];
-        foreach (var role in roles) {
-            if (!await roleManager.RoleExistsAsync(role)) {
-                await roleManager.CreateAsync(new IdentityRole<long>(role));
-                logger.LogInformation("Rol '{Role}' creado", role);
-            }
-        }
 
         // ── Usuario ADMIN ──
         const string adminEmail = "admin@admin.com";
@@ -62,6 +55,21 @@ public static class IdentitySeeder {
             } else {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 logger.LogWarning("Error al crear usuario: {Errors}", errors);
+            }
+        }
+    }
+
+    public static async Task EnsureRolesAsync(IServiceProvider scopeServices, ILogger logger) {
+        var roleManager = scopeServices.GetRequiredService<RoleManager<IdentityRole<long>>>();
+        string[] roles = ["ADMIN", "USER"];
+        foreach (var role in roles) {
+            if (!await roleManager.RoleExistsAsync(role)) {
+                var result = await roleManager.CreateAsync(new IdentityRole<long>(role));
+                if (!result.Succeeded) {
+                    var errors = string.Join(", ", result.Errors.Select(error => error.Description));
+                    throw new InvalidOperationException($"No se pudo crear el rol '{role}': {errors}");
+                }
+                logger.LogInformation("Rol '{Role}' creado", role);
             }
         }
     }
