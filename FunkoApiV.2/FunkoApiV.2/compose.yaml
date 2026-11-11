@@ -1,5 +1,4 @@
 services:
-  # Base de datos PostgreSQL
   db:
     image: postgres:16-alpine
     container_name: funkoapi_postgres
@@ -8,10 +7,10 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_DB: funkos
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d funkos"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d funkos"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -19,6 +18,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - funko_net
+
   mongo_db:
     image: mongo:7
     container_name: funkoapi_mongo
@@ -29,6 +29,7 @@ services:
       - mongo_data:/data/db
     networks:
       - funko_net
+
   cassandra:
     image: cassandra:latest
     container_name: funkoapi_cassandra
@@ -36,12 +37,12 @@ services:
     ports:
       - "9043:9042"
     environment:
-      - CASSANDRA_CLUSTER_NAME=FunkoCluster
+      CASSANDRA_CLUSTER_NAME: FunkoCluster
     volumes:
       - cassandra_data:/var/lib/cassandra
     networks:
       - funko_net
-  # Cache Redis
+
   redis:
     image: redis:latest
     container_name: funkoapi_redis
@@ -51,17 +52,17 @@ services:
       - redis_data:/data
     networks:
       - funko_net
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: funkoapi_mailpit
-    restart: always
+    profiles: ["development"]
     ports:
       - "1025:1025"
       - "8025:8025"
     networks:
       - funko_net
 
-  # API .NET (FunkoApi V.2)
   backend:
     build:
       context: .
@@ -71,17 +72,19 @@ services:
     ports:
       - "5197:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__Postgre=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
-      - ConnectionStrings__Redis=redis:6379
-      - ConnectionStrings__Mongo=mongodb://mongo_db:27017
-      - Cassandra__Hosts__0=cassandra
-      - Cassandra__Port=9042
-      - Smtp__Host=smtp.gmail.com
-      - Smtp__Port=587
-      - Smtp__Username=oms04081974@gmail.com
-      - Smtp__Password=ersvficvfajtehbc        
-      - Smtp__From=oms04081974@gmail.com
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgre: Host=db;Port=5432;Database=funkos;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__Mongo: mongodb://mongo_db:27017
+      Cassandra__Hosts__0: cassandra
+      Cassandra__Port: 9042
+      Jwt__Key: ${JWT_KEY:?Define JWT_KEY en .env}
+      Smtp__Host: ${SMTP_HOST:?Define SMTP_HOST en .env}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__Security: ${SMTP_SECURITY:-StartTls}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__From: ${SMTP_FROM:?Define SMTP_FROM en .env}
     depends_on:
       db:
         condition: service_healthy
@@ -90,8 +93,6 @@ services:
       mongo_db:
         condition: service_started
       cassandra:
-        condition: service_started
-      mailpit:
         condition: service_started
     networks:
       - funko_net

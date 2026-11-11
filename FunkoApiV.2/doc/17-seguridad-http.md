@@ -62,6 +62,8 @@ y cambios de esquema no compatibles con instalaciones que ya tienen tablas.
 - CORS, rate limiting, cabeceras CSP/seguridad, Swagger, GraphQL y SignalR:
   configurados en el código actual.
 - Redis: caché de aplicación; no hay Output Cache HTTP configurado.
-- Envío de emails: no está implementado.
+- Envío de emails: el registro intenta enviar un correo de bienvenida. SMTP se
+  configura con `Smtp__Host`, `Smtp__Port`, `Smtp__Security`, `Smtp__From`,
+  `Smtp__Username` y `Smtp__Password`. Mailpit se usa en Development.
 - Producción: el cleaner de inicio elimina datos; revisa
   [Docker](19-docker.md) antes de desplegar.

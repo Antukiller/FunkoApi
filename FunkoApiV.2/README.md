@@ -32,11 +32,12 @@ Para apagarla, usa `Ctrl+C` en la misma terminal.
 - GraphQL con consultas, mutaciones, cargas y suscripciones.
 - SignalR en el hub autenticado `/hubs/funkos`.
 - PostgreSQL para Funkos, categorías e Identity; MongoDB para proveedores; Cassandra para consultas agregadas; Redis para caché.
+- Email de bienvenida al registrar usuarios; en desarrollo los mensajes se capturan con Mailpit.
 - Validación con FluentValidation, respuestas de error coherentes, autorización JWT por roles y borrado lógico en Funkos/categorías.
 - Límites de peticiones, CORS configurable, cabeceras CSP/seguridad en producción e índices PostgreSQL para filtros y búsquedas.
 - Tests .NET y colección Bruno.
 
-**Aún no forma parte del código:** envío de emails y Output Cache HTTP. Redis está integrado como caché de aplicación; no equivale a Output Cache.
+**Aún no forma parte del código:** Output Cache HTTP. Redis está integrado como caché de aplicación; no equivale a Output Cache.
 
 ## Entornos y datos: lee antes de arrancar producción
 

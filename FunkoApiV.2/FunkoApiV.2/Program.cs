@@ -115,6 +115,8 @@ public class Program {
         // 5. Caché (Redis, sin bifurcar por entorno)
         builder.Services.Configure<CacheConfig>(
             builder.Configuration.GetSection(CacheConfig.CacheName));
+        builder.Services.Configure<SmtpSettings>(
+            builder.Configuration.GetSection("Smtp"));
 
         builder.Services.AddStackExchangeRedisCache(options =>
             options.Configuration = FunkoConfig.RedisConnection);

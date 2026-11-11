@@ -32,4 +32,8 @@ actualizarse. No añadas efectos secundarios silenciosos ante fallos.
 4. Añade tests unitarios del servicio y, si toca persistencia, tests de
    integración.
 
-Los servicios de email no están implementados en el estado actual.
+`Service/Email/EmailService.cs` envía un correo de bienvenida al registrarse un
+usuario. En Development se conecta a Mailpit (`localhost:1025`); abre
+<http://localhost:8025> para consultar los mensajes capturados. Los ajustes
+SMTP se enlazan desde la sección `Smtp`; producción debe proporcionar sus
+propias variables de entorno y no reutilizar credenciales de desarrollo.
