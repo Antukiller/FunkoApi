@@ -1,4 +1,4 @@
-﻿services:
+services:
   # Base de datos PostgreSQL
   db:
     image: postgres:16-alpine
@@ -8,10 +8,10 @@
       - "5432:5432"
     environment:
       POSTGRES_DB: funkos
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d funkos"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d funkos"]
       interval: 3s
       timeout: 3s
       retries: 5
@@ -60,11 +60,9 @@
     ports:
       - "5197:8080"
     environment:
-      - ConnectionStrings__Postgre=Host=db;Port=5432;Database=funkos;Username=postgres;Password=postgres
-      - ConnectionStrings__Redis=redis:6379
-      - ConnectionStrings__Mongo=mongodb://mongo_db:27017
-      - Cassandra__Hosts__0=cassandra
-      - Cassandra__Port=9042
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgre: "Host=db;Port=5432;Database=funkos;Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD in .env}"
+      Jwt__Key: ${JWT_KEY:?Define JWT_KEY in .env}
     depends_on:
       db:
         condition: service_healthy
@@ -76,7 +74,6 @@
         condition: service_started
     networks:
       - funko_net
-
 networks:
   funko_net:
     driver: bridge

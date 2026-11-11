@@ -4,8 +4,10 @@ using FluentValidation;
 using FunkoApiV._2.Dto;
 using FunkoApiV._2.Entity;
 using FunkoApiV._2.Error;
+using FunkoApiV._2.Infrastructure;
 using FunkoApiV._2.Models;
 using FunkoApiV._2.Repository;
+using FunkoApiV._2.Repository.Cassandra;
 using FunkoApiV._2.Service;
 using FunkoApiV._2.Storage;
 using FunkoApiV._2.Validator;
@@ -44,6 +46,17 @@ public class FunkoServiceIntegrationTests {
         services.AddDbContext<AppDbContext>(o => o.UseNpgsql(_postgres.GetConnectionString()));
         services.AddScoped<IFunkoRepository, FunkoRepository>();
         services.AddScoped<ICategoriaRepository, CategoriaRepository>();
+        var cassandraRepository = new Mock<ICassandraRepository>();
+        cassandraRepository
+            .Setup(repository => repository.SincronizarFunkoAsync(
+                It.IsAny<long>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<decimal>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(Task.CompletedTask);
+        cassandraRepository
+            .Setup(repository => repository.EliminarFunkoAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>()))
+            .Returns(Task.CompletedTask);
+        services.AddSingleton(cassandraRepository.Object);
         services.AddScoped<IProveedorRepository>(_ => {
             var m = new Mock<IProveedorRepository>();
             m.Setup(x => x.GetById(It.IsAny<string>()))
@@ -51,6 +64,7 @@ public class FunkoServiceIntegrationTests {
             return m.Object;
         });
         services.AddScoped<IFunkoService, FunkoService>();
+        services.AddRealtimeSignalR();
         services.AddSingleton<IStorageService>(new Mock<IStorageService>().Object);
         services.AddLogging();
         services.AddTransient<IValidator<FunkoCreateRequest>, FunkoCreateValidator>();

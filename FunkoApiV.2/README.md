@@ -122,37 +122,39 @@ API para gestionar una colección de Funkos (figuras de vinilo) con las siguient
 
 ### Desarrollo Local
 
-```powershell
-# 1. Levantar servicios de base de datos (Docker)
-docker-compose -f compose.yaml up -d
-
-# 2. Ejecutar la API
-dotnet run --project FunkoApiV.2\FunkoApiV.2.csproj
-
-# 3. Abrir Swagger
-# https://localhost:7259/openapi/v1.json o http://localhost:5197/openapi/v1.json
-```
-
-### Desarrollo en Producción con Docker
+Desde `FunkoApiV.2`:
 
 ```powershell
-# Construir y levantar todo el stack
-docker-compose -f docker-compose.prod.yml up -d --build
+# Preparar variables locales de Docker (hazlo una sola vez).
+Copy-Item .env.example .env
+
+# Arrancar las bases de datos y servicios auxiliares en Docker.
+docker compose -f .\FunkoApiV.2\compose.yaml up -d db mongo_db cassandra redis
+
+# Arrancar la API en Development usando el perfil http.
+dotnet run --project .\FunkoApiV.2\FunkoApiV.2.csproj --launch-profile http
 ```
 
-### Variables de entorno (.env)
+Swagger estará en `http://localhost:5197/swagger`. Cassandra se publica en el host como `localhost:9043`.
 
-Copiar `.env.example` a `.env` y ajustar los valores:
+### Producción con Docker
 
-```env
-ConnectionStrings__DefaultConnection=Host=localhost;Database=funko;Username=admin;Password=admin
-ConnectionStrings__Mongo=mongodb://localhost:27017
-Cache__Redis=localhost:6379
-Jwt__Key=clave-secreta-de-al menos-32-caracteres
-Jwt__Issuer=FunkoApi
-Jwt__Audience=FunkoApi
+Desde `FunkoApiV.2`, copia `.env.example` como `.env` y sustituye `POSTGRES_PASSWORD` y `JWT_KEY` por valores privados aleatorios antes del despliegue. El `.env` está excluido de Git.
+
+```powershell
+docker compose -f .\FunkoApiV.2\compose.yaml up -d --build
+docker compose -f .\FunkoApiV.2\compose.yaml logs -f backend
 ```
 
+El contenedor ejecuta la API con `ASPNETCORE_ENVIRONMENT=Production`; Swagger queda deshabilitado. Para parar sin borrar datos: `docker compose -f .\FunkoApiV.2\compose.yaml down`.
+
+### Configuración por entorno
+
+- `FunkoApiV.2/appsettings.json`: valores compartidos (logs, límites, caché, almacenamiento, JWT issuer/audience y keyspace Cassandra).
+- `FunkoApiV.2/appsettings.Development.json`: conexiones de servicios locales, CORS para los frontends locales, Cassandra en `localhost:9043` y una clave JWT solo para desarrollo. El perfil `http` de `launchSettings.json` selecciona `Development`.
+- `FunkoApiV.2/appsettings.Production.json`: valores propios de contenedores (nombres DNS `db`, `mongo_db`, `redis` y `cassandra`) y logs menos detallados.
+- .NET carga `appsettings.json` y luego `appsettings.{Environment}.json`; los valores del entorno específico reemplazan los comunes. Las variables de entorno tienen prioridad sobre ambos JSON.
+- `JWT_KEY` se inyecta como `Jwt__Key` desde `.env` en Docker. Los JSON de Production no contienen claves secretas.
 ---
 
 ## 🧪 Estrategia de Testing

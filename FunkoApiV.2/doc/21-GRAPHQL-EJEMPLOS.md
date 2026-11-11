@@ -3,8 +3,9 @@
 ## Abrir el explorador
 
 1. Inicia la API desde el perfil de desarrollo.
-2. Abre `http://localhost:5197/graphql` (o `https://localhost:7259/graphql` si usas HTTPS).
-3. En el explorador, escribe una operación en el panel izquierdo y las variables JSON en el panel **Variables**.
+2. Inicia bruno para obetener el token de autenticacion(http://localhost:5197/api/auth/login)
+3. Abre `http://localhost:5197/graphql` (o `https://localhost:7259/graphql` si usas HTTPS).
+4. En el explorador, escribe una operación en el panel izquierdo y las variables JSON en el panel **Variables**.
 
 Los nombres de campos que aparecen aquí usan el formato GraphQL habitual de Hot Chocolate: camelCase. Las consultas de lectura no requieren autenticación. Las mutaciones requieren un token de un usuario con rol `ADMIN`.
 
@@ -12,8 +13,8 @@ Para obtener un token, inicia sesión con una cuenta existente enviando `POST ht
 
 ```json
 {
-  "email": "TU_EMAIL",
-  "password": "TU_PASSWORD"
+  "email": "admin@admin.com",
+  "password": "Admin123!"
 }
 ```
 

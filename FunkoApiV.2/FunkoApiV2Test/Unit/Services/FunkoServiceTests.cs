@@ -45,6 +45,10 @@ public class FunkoServiceTests {
         _repoProveedor = new Mock<IProveedorRepository>();
         _repoCategoria = new Mock<ICategoriaRepository>();
         _repoCassandra = new Mock<ICassandraRepository>();
+        _repoCassandra
+            .Setup(repository => repository.EliminarFunkoAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>()))
+            .Returns(Task.CompletedTask);
         _hubContext = new Mock<IHubContext<FunkosHub>>();
         var mockClients = new Mock<IHubClients>();
         var mockClientProxy = new Mock<IClientProxy>();
@@ -277,6 +281,12 @@ public class FunkoServiceTests {
 
     [Test]
     public async Task Delete_ConFunkoExistente_DevuelveExito() {
+        _repo.Setup(x => x.GetByIdAsync(1))
+            .ReturnsAsync(Result.Success<Funko, DomainError>(new Funko {
+                Id = 1,
+                CategoriaId = "Anime000001",
+                ProveedorId = ProveedorId
+            }));
         _repo.Setup(x => x.DeleteAsync(1))
             .ReturnsAsync(Result.Success<bool, DomainError>(true));
 
@@ -285,6 +295,8 @@ public class FunkoServiceTests {
         resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeTrue();
         _repo.Verify(x => x.DeleteAsync(1), Times.Once);
+        _repoCassandra.Verify(repository =>
+            repository.EliminarFunkoAsync("Anime000001", ProveedorId, 1), Times.Once);
     }
 
     [Test]
