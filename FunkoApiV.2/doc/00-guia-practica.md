@@ -60,7 +60,8 @@ El script:
 1. Comprueba que Docker responde.
 2. Crea `.env` desde `.env.example` si falta.
 3. Levanta PostgreSQL, MongoDB, Cassandra, Redis y Mailpit.
-4. Arranca la API con `ASPNETCORE_ENVIRONMENT=Development` en el puerto 5798.
+4. Comprueba que la contraseña de PostgreSQL coincide con la del volumen.
+5. Arranca la API con `ASPNETCORE_ENVIRONMENT=Development` en el puerto 5798.
 
 La API queda en primer plano: no cierres esa terminal. Para detenerla, pulsa
 `Ctrl+C`; los contenedores de datos siguen levantados.
@@ -336,6 +337,23 @@ En desarrollo, `Start-Development.ps1` crea `FunkoApiV.2\FunkoApiV.2\.env` desde
 plantilla. En producción, usa `.\Start.ps1 -Production -InitEnv` y revisa
 `.env.production`. Compose valida las variables de todos los servicios aunque
 solo levantes las bases.
+
+### `28P01: password authentication failed` en desarrollo
+
+El volumen de PostgreSQL se creó con otra contraseña (por ejemplo, al ejecutar
+Production con el mismo volumen). El script lo detecta antes de arrancar la API
+y muestra la orden para corregirlo. Para conservar los datos:
+
+```powershell
+$password = (Select-String -Path '.\FunkoApiV.2\FunkoApiV.2\.env' `
+  -Pattern '^POSTGRES_PASSWORD=(.+)$').Matches[0].Groups[1].Value
+docker exec funkoapi_postgres psql -U postgres -d postgres `
+  -c "ALTER USER postgres WITH PASSWORD '$password';"
+.\Start.ps1
+```
+
+`.env` y `appsettings.Development.json` deben usar la misma contraseña. La
+alternativa es `.\Start.ps1 -ResetData`, que borra los volúmenes de desarrollo.
 
 ### El puerto 5798 ya está ocupado
 

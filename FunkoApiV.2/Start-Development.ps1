@@ -54,7 +54,7 @@ if ($ResetData) {
 
 $portInUse = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
 if ($portInUse) {
-    throw "El puerto $Port ya está ocupado. Detén la aplicación que lo usa o ejecuta .\Start-Development.ps1 -Port 5197."
+    throw "El puerto $Port ya está ocupado. Detén la aplicación que lo usa o ejecuta .\Start-Development.ps1 -Port 5800."
 }
 
 Write-Host "==> Iniciando PostgreSQL, MongoDB, Cassandra, Redis y Mailpit..." -ForegroundColor Cyan
@@ -62,6 +62,59 @@ Write-Host "==> Iniciando PostgreSQL, MongoDB, Cassandra, Redis y Mailpit..." -F
 if ($LASTEXITCODE -ne 0) {
     throw "Docker Compose no pudo iniciar los servicios (código $LASTEXITCODE)."
 }
+
+# POSTGRES_PASSWORD solo se aplica al crear el volumen. Si el volumen ya existía
+# con otra contraseña, la API fallará con 28P01. Lo comprobamos antes de arrancar.
+function Get-DotEnvValue {
+    param(
+        [string]$Path,
+        [string]$Key
+    )
+
+    $match = Select-String -Path $Path -Pattern "^$([regex]::Escape($Key))=(.*)$" |
+        Select-Object -First 1
+    if ($null -eq $match) {
+        return $null
+    }
+
+    return $match.Matches[0].Groups[1].Value.Trim()
+}
+
+$postgresUser = Get-DotEnvValue -Path $envFile -Key "POSTGRES_USER"
+if ([string]::IsNullOrWhiteSpace($postgresUser)) {
+    $postgresUser = "postgres"
+}
+$postgresPassword = Get-DotEnvValue -Path $envFile -Key "POSTGRES_PASSWORD"
+if ([string]::IsNullOrWhiteSpace($postgresPassword)) {
+    throw "Falta POSTGRES_PASSWORD en $envFile."
+}
+
+Write-Host "==> Comprobando credenciales de PostgreSQL..." -ForegroundColor Cyan
+$postgresNetwork = (& docker inspect funkoapi_postgres --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>$null)
+if ([string]::IsNullOrWhiteSpace($postgresNetwork)) {
+    throw "No se pudo inspeccionar el contenedor funkoapi_postgres. ¿Está arrancado?"
+}
+
+& docker run --rm --network $postgresNetwork `
+    -e PGPASSWORD=$postgresPassword `
+    postgres:16-alpine `
+    psql -h db -U $postgresUser -d postgres -tAc "select 1" 2>$null | Out-Null
+
+if ($LASTEXITCODE -ne 0) {
+    $alterUser = 'docker exec -it funkoapi_postgres psql -U postgres -c "ALTER USER postgres WITH PASSWORD ''' + $postgresPassword + ''';"'
+    Write-Host ""
+    Write-Host "POSTGRES_PASSWORD no coincide con la contraseña guardada en el volumen." -ForegroundColor Red
+    Write-Host "POSTGRES_PASSWORD solo se aplica cuando el volumen está vacío." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Para conservar los datos, cambia la contraseña dentro de Postgres:" -ForegroundColor Yellow
+    Write-Host "  $alterUser"
+    Write-Host "O borra los volúmenes de desarrollo (se perderán los datos): .\Start.ps1 -ResetData" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Recuerda que .env y appsettings.Development.json deben usar la misma contraseña." -ForegroundColor Yellow
+    throw "Credenciales de PostgreSQL incorrectas. La API no se ha arrancado."
+}
+
+Write-Host "    Credenciales correctas." -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Servicios listos:" -ForegroundColor Green

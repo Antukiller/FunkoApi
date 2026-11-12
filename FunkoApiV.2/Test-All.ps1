@@ -38,7 +38,7 @@ try {
         throw "La API respondió con HTTP $($health.StatusCode)."
     }
 } catch {
-    throw "No se puede acceder a la API en $BaseUrl. Arráncala primero con .\Start-Development.ps1. Detalle: $($_.Exception.Message)"
+    throw "No se puede acceder a la API en $BaseUrl. Arráncala primero desde la raíz con .\Start.ps1. Detalle: $($_.Exception.Message)"
 }
 
 $previousEmail = $env:FUNKO_ADMIN_EMAIL

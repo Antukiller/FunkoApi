@@ -112,6 +112,18 @@ try {
         $ready = $false
         for ($i = 0; $i -lt 60; $i++) {
             if ($apiProcess.HasExited) {
+                $logText = @()
+                foreach ($logPath in @($apiOutLog, $apiErrLog)) {
+                    if (Test-Path -LiteralPath $logPath) {
+                        $logText += Get-Content -LiteralPath $logPath -Raw
+                    }
+                }
+                $logText = $logText -join "`n"
+
+                if ($logText -match "28P01|password authentication failed") {
+                    throw "PostgreSQL rechazó la contraseña (28P01). El volumen se creó con otra contraseña. Consulta el apartado 28P01 de doc\00-guia-practica.md (dentro de FunkoApiV.2) o ejecuta .\Start.ps1 -ResetData para recrear los volúmenes de desarrollo."
+                }
+
                 throw "La API terminó antes de arrancar. Revisa $apiOutLog y $apiErrLog."
             }
             try {

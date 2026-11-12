@@ -32,7 +32,9 @@ usar Hot Reload y el depurador sin reconstruir la imagen.
 1. Comprueba Docker.
 2. Crea `FunkoApiV.2\FunkoApiV.2\.env` desde `.env.example` si falta.
 3. Levanta `db`, `mongo_db`, `cassandra`, `redis` y Mailpit con `--wait`.
-4. Arranca la API en Development en el puerto 5798.
+4. Comprueba las credenciales de PostgreSQL contra el volumen. Si no coinciden,
+   aborta con la orden exacta para corregirlas en vez de dejar que la API falle.
+5. Arranca la API en Development en el puerto 5798.
 
 La API queda en primer plano; deténla con `Ctrl+C`. Mailpit está en
 <http://localhost:8025>. Para parar también los contenedores:
@@ -142,8 +144,22 @@ Las variables de entorno prevalecen sobre JSON. Compose transforma `JWT_KEY` en
 
 ### `28P01: password authentication failed`
 
-`POSTGRES_PASSWORD` solo se aplica cuando el volumen está vacío. Para conservar
-los datos, cambia la contraseña dentro de Postgres:
+`POSTGRES_PASSWORD` solo se aplica cuando el volumen está vacío. Si el volumen
+ya existía con otra contraseña, la API no puede conectar. Los scripts de
+desarrollo y producción lo detectan antes de arrancar el backend y muestran la
+orden exacta para corregirlo.
+
+En desarrollo, para conservar los datos:
+
+```powershell
+$password = (Select-String -Path '.\FunkoApiV.2\FunkoApiV.2\.env' `
+  -Pattern '^POSTGRES_PASSWORD=(.+)$').Matches[0].Groups[1].Value
+docker exec funkoapi_postgres psql -U postgres -d postgres `
+  -c "ALTER USER postgres WITH PASSWORD '$password';"
+.\Start.ps1
+```
+
+En producción, el mismo procedimiento con `.env.production`:
 
 ```powershell
 $password = (Select-String -Path '.\FunkoApiV.2\FunkoApiV.2\.env.production' `
@@ -153,8 +169,8 @@ docker exec funkoapi_postgres psql -U postgres -d postgres `
 .\Start.ps1 -Production
 ```
 
-También puedes poner en `.env.production` la contraseña que ya usa el volumen.
-`down -v` aplica la nueva, pero borra los datos.
+También puedes poner en el fichero de entorno la contraseña que ya usa el
+volumen. `-ResetData` o `down -v` aplican la nueva, pero borran los datos.
 
 ### El login devuelve 500 tras desplegar
 
